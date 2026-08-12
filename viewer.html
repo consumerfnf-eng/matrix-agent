@@ -1,0 +1,557 @@
+<!doctype html><html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>브랜드 시즌기획 리포트 · v2</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+:root{--ink:#2b2b2b;--sub:#8f8a88;--line:#eeeae8;--bg:#ffffff;--card:#ffffff;
+  --coral:#e0747d;--coral2:#c16b66;--orange:#f5936b;--plum:#6c5b7f;--sand:#eae0df;
+  --g1:#3e7a63;--g2:#6ba88c;--g3:#9fc7ae;--g4:#cde6d5}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Pretendard","Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;color:var(--ink);background:var(--bg);line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:34px 26px 90px}
+h1{font-size:34px;font-weight:800;margin:0 0 4px;letter-spacing:-.01em}
+h2{font-size:19px;font-weight:700;margin:0;letter-spacing:-.01em}
+h3{font-size:16px;font-weight:700;margin:0 0 6px}
+.sub{color:var(--sub)}.small{font-size:12px;color:var(--sub)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin:0 0 16px}
+/* 에디토리얼 헤더 — 코랄 틱 + 얇은 룰 (Data Viz Kit 느낌) */
+.header{padding:6px 2px 22px;border-bottom:2px solid var(--coral);margin-bottom:24px}
+.ttl{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px}
+.thesis{font-size:15px;color:#5f5a58;margin:6px 0 16px;max-width:760px}
+.stats{display:flex;flex-wrap:wrap;gap:10px}
+.stat{border:1px solid var(--line);border-radius:11px;padding:10px 16px;min-width:118px}
+.stat b{font-size:24px;display:block;color:var(--coral2);font-weight:800}.stat span{font-size:11px;color:var(--sub)}
+.rail{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0}
+.rail div{border:1px solid var(--line);color:var(--sub);border-radius:20px;padding:5px 13px;font-size:12px}
+.upd{font-size:11px;color:var(--sub);margin-top:12px}
+.sec-h{display:flex;align-items:center;gap:9px;margin:34px 0 12px;padding-bottom:7px;border-bottom:1px solid #f2d7d9}
+.sec-h .n{color:var(--coral);font-weight:800;font-size:14px;font-variant-numeric:tabular-nums;flex:none}
+.chip{display:inline-block;background:#f6f2f1;color:#6a625f;border-radius:20px;padding:2px 10px;font-size:11px;margin:2px 3px 2px 0}
+.chip.warn{background:#fdeee7;color:var(--coral2)}.chip.acc{background:#e8f1ec;color:var(--g1)}
+.brow{display:flex;align-items:center;gap:8px;margin:3px 0}
+.brow .lbl{width:150px;font-size:12px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brow .pct{width:70px;text-align:right;font-size:11px;color:var(--sub);flex:none}
+.matrix{display:grid;gap:5px;min-width:620px}
+.mc{border:1px solid var(--line);border-radius:9px;padding:9px;font-size:12px;cursor:pointer;transition:.12s}
+.mc:hover{outline:2px solid var(--coral);outline-offset:-2px}
+.mc.hd{background:#faf6f5;color:var(--coral2);text-align:center;font-weight:700;cursor:default;border-color:#f2d7d9}
+.mc b{font-size:17px;font-weight:800}
+.grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.ph{width:100%;height:120px;object-fit:cover;object-position:center bottom;border-radius:8px;background:#f4f1ef}
+body[data-outer="1"] .ph{height:200px;object-fit:contain}
+body[data-outer="1"] .sc .rep{height:280px}
+body[data-outer="1"] .sc .rep img{object-fit:contain}
+.sc{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;margin-bottom:16px}
+.sc .top{display:grid;grid-template-columns:180px 1fr;gap:0}
+.sc .rep{height:196px;background:#f4f1ef}.sc .rep img{width:100%;height:100%;object-fit:cover;object-position:center bottom}
+.sc .body{padding:16px}
+.btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 14px;font-size:13px;cursor:pointer;color:var(--ink);transition:.12s}
+.btn:hover{border-color:var(--coral);color:var(--coral2)}
+.btn.p{background:var(--coral);color:#fff;border-color:var(--coral)}.btn.p:hover{background:var(--coral2);color:#fff}
+.tag{font-size:10px;padding:1px 7px;border-radius:5px;background:#efeae8;color:#7a7370;margin-right:4px;font-weight:600}
+.read{background:#fbf5f4;border-left:3px solid var(--coral);padding:10px 13px;border-radius:0 9px 9px 0;font-size:13px;margin-top:10px;color:#5f5a58}
+a.src{color:var(--coral2);text-decoration:none;font-size:12px}
+.empty{color:var(--sub);font-size:13px;padding:16px;text-align:center}
+@media(max-width:640px){.sc .top{grid-template-columns:1fr}.sc .rep{height:200px}h1{font-size:26px}}
+</style></head>
+<body>
+<div class="wrap" id="report">
+  <div class="header">
+    <div class="ttl"><div><h1 id="hTitle">시즌기획 리포트</h1>
+      <div id="hProjBadge" style="display:inline-block;margin:4px 0;padding:3px 10px;border-radius:6px;background:#1d3a2f;color:#fff;font-size:12px;font-weight:700"></div>
+      <select id="projSel" onchange="pickProject(this.value)" style="margin-left:8px;padding:3px 8px;font-size:12px;display:none"></select>
+      <div class="thesis" id="hThesis">지금 뜨는 트렌드와 검증된 레퍼런스를 브랜드 DNA로 재해석해, 카테고리×라이프스타일별 다음 시즌 방향을 제안합니다.</div></div>
+      <div style="text-align:right;white-space:nowrap">
+        <button class="btn" onclick="reloadAll()">↻ 새로고침</button>
+        <button class="btn" onclick="saveStyleHTML()">스타일만 내보내기</button>
+        <button class="btn p" onclick="saveHTML()">전체 리포트 저장</button>
+      </div>
+    </div>
+    <div class="stats" id="hStats"></div>
+    <div class="rail"><div>① 트렌드 흐름</div><div>② 매트릭스(카테고리×DNA)</div><div>③ 강세·공백 판정</div><div>④ 전체 구성비율</div><div>⑤ 스타일 추천</div></div>
+    <div class="upd" id="hUpd"></div>
+  </div>
+  <div id="body"></div>
+</div>
+<script>
+const SB_URL='https://qlrinkwpqqgutievzctk.supabase.co';
+const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFscmlua3dwcXFndXRpZXZ6Y3RrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4MTYwODIsImV4cCI6MjEwMTM5MjA4Mn0.hCM_TFE-IUbjlYx8R_eeaDjRSLdNUMP90dmiv4K920Y';
+const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sel=(t,q)=>fetch(`${SB_URL}/rest/v1/${t}?${q}`,{headers:{apikey:SB_ANON,Authorization:'Bearer '+SB_ANON}}).then(r=>r.ok?r.json():[]);
+const pub=p=>`${SB_URL}/storage/v1/object/public/product-images/${p}`;
+let openCell=null, DATA=null;
+
+function pctBars(pairs,total){
+  if(!total)return '<div class="small">데이터 없음</div>';
+  return pairs.map(([k,v])=>{const p=Math.round(v/total*100);
+    return `<div class="brow"><div class="lbl" title="${esc(k)}">${esc(k)}</div>
+      <div class="bar"><span style="width:${p}%"></span></div><div class="pct">${v} · ${p}%</div></div>`;}).join('');
+}
+function tally(arr){const m={};arr.forEach(x=>{if(x==null||x==='')return;m[x]=(m[x]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);}
+const PALETTE=['#e0747d','#3e7a63','#f5936b','#6c5b7f','#6ba88c','#c16b66','#9fc7ae','#c19a86','#8f7a9c','#cde6d5','#eab0a0','#b9d9c6'];
+// 도넛 SVG + 범례 (data: [[label,value],...]) — 미분류는 호출 전에 제거
+function donut(data,{size=120,unit='모델',note=''}={}){
+  const tot=data.reduce((s,d)=>s+d[1],0);
+  if(!tot)return '<div class="small">데이터 없음</div>';
+  const R=size/2,r=R*0.6;let a=-Math.PI/2,arcs='';
+  data.forEach(([,v],i)=>{const ang=v/tot*2*Math.PI,a2=a+ang;
+    const x1=R+R*Math.cos(a),y1=R+R*Math.sin(a),x2=R+R*Math.cos(a2),y2=R+R*Math.sin(a2);
+    const xi=R+r*Math.cos(a2),yi=R+r*Math.sin(a2),xi1=R+r*Math.cos(a);
+    const big=ang>Math.PI?1:0;
+    arcs+=`<path d="M${x1} ${y1} A${R} ${R} 0 ${big} 1 ${x2} ${y2} L${xi} ${yi} A${r} ${r} 0 ${big} 0 ${xi1} ${R+r*Math.sin(a)} Z" fill="${PALETTE[i%PALETTE.length]}"/>`;
+    a=a2;});
+  const leg=data.map(([k,v],i)=>`<div class="brow"><span style="width:10px;height:10px;border-radius:2px;background:${PALETTE[i%PALETTE.length]};flex:none"></span>
+    <div class="lbl" title="${esc(k)}">${esc(k)}</div><div class="pct">${v} · ${Math.round(v/tot*100)}%</div></div>`).join('');
+  return `<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="flex:none">${arcs}
+      <text x="${R}" y="${R-2}" text-anchor="middle" font-size="15" font-weight="700" fill="#1a1a1a">${tot}</text>
+      <text x="${R}" y="${R+13}" text-anchor="middle" font-size="9" fill="#6b6b6b">${unit}</text></svg>
+    <div style="min-width:150px;flex:1">${leg}${note?`<div class="small" style="margin-top:5px;color:#999">${note}</div>`:''}</div></div>`;
+}
+function stars(n,max){const k=Math.max(1,Math.min(3,Math.round(n/Math.max(1,max)*3)));return '★'.repeat(k);}
+// 트렌드 태그 코드 → 한글 라벨 (없으면 원문 표시)
+const KW_KO={comfort:'컴포트·편안함',tall_boot:'롱부츠',slouch_biker:'슬라우치 바이커',texture_plush:'퍼·플러시',brown_suede:'브라운 스웨이드',almond_soft_square:'아몬드·소프트 스퀘어 토',block_lowheel:'블록 로우힐',pointed_toe:'포인티드 토',dress_shoe:'드레스 슈즈',high_vamp:'하이뱀프',slipper_mule:'슬리퍼·뮬',animal_exotic:'애니멀·엑조틱',color_accent:'컬러 액센트',slim_sneaker:'슬림 스니커',technical_sneaker:'테크니컬 스니커',statement_sneaker:'스테이트먼트 스니커',two_tone:'투톤',embellishment:'장식·엠벨리시',heritage_hybrid:'헤리티지 하이브리드',market_signal:'시장 신호',dress_revival:'드레스 슈즈 복귀'};
+const kwko=w=>(window.KWKO&&window.KWKO[w])||KW_KO[w]||w;
+// 신호 코드 → 축(소재/컬러/디테일/솔/토) 그룹 + 한글
+const SIG_AXIS={SUEDE_UPPER:'소재',LEATHER_UPPER:'소재',TECHNICAL_MESH:'소재',MESH:'소재',KNIT_UPPER:'소재',KNIT:'소재',CANVAS:'소재',NUBUCK:'소재',SHEARLING:'소재',PATENT:'소재',SATIN:'소재',VELVET:'소재',RUBBER:'소재',
+  TWO_TONE:'컬러',COLOR_BLOCK:'컬러',COLORBLOCK:'컬러',MONOCHROME:'컬러',COLOR_ACCENT:'컬러',TONAL:'컬러',
+  MOLDED_LOGO:'디테일',ALLOVER_MONOGRAM:'디테일',MONOGRAM:'디테일',EMBELLISHMENT:'디테일',MARY_JANE_STRAP:'디테일',LACE_TRIM:'디테일',VELCRO_STRAP:'디테일',METAL_HARDWARE:'디테일',METALLIC_TRIM:'디테일',APPLIQUE:'디테일',BUCKLE:'디테일',STRAP:'디테일',
+  CHUNKY_SOLE:'솔',PLATFORM:'솔',FLAT_SOLE:'솔',CUP_SOLE:'솔',BUBBLE_SOLE:'솔',LUG_SOLE:'솔',THICK_SOLE:'솔',THIN_SOLE:'솔',VULCANIZED:'솔',WEDGE:'솔',
+  LOW_PROFILE:'토·프로파일',HIGH_VAMP:'토·프로파일',ROUND_TOE:'토·프로파일',POINTED_TOE:'토·프로파일',SQUARE_TOE:'토·프로파일',ALMOND_TOE:'토·프로파일'};
+const SIG_KO={SUEDE_UPPER:'스웨이드 어퍼',LEATHER_UPPER:'레더 어퍼',TECHNICAL_MESH:'테크니컬 메쉬',KNIT_UPPER:'니트 어퍼',SHEARLING:'시어링',PATENT:'페이턴트',TWO_TONE:'투톤',COLOR_BLOCK:'컬러 블록',MONOCHROME:'모노크롬',COLOR_ACCENT:'컬러 액센트',MOLDED_LOGO:'몰디드 로고',ALLOVER_MONOGRAM:'올오버 모노그램',MONOGRAM:'모노그램',EMBELLISHMENT:'장식',MARY_JANE_STRAP:'메리제인 스트랩',LACE_TRIM:'레이스 트림',METAL_HARDWARE:'메탈 하드웨어',APPLIQUE:'아플리케',CHUNKY_SOLE:'청키 솔',PLATFORM:'플랫폼',FLAT_SOLE:'플랫 솔',CUP_SOLE:'컵솔',BUBBLE_SOLE:'버블 솔',LUG_SOLE:'러그 솔',THICK_SOLE:'두꺼운 솔',LOW_PROFILE:'로우 프로파일',HIGH_VAMP:'하이뱀프',ROUND_TOE:'라운드 토',POINTED_TOE:'포인티드 토',SQUARE_TOE:'스퀘어 토',ALMOND_TOE:'아몬드 토'};
+const sigko=s=>SIG_KO[s]||s.toLowerCase().replace(/_/g,' ');
+// 지배 속성을 축별 최상위 신호로 묶어 mockup의 소재/컬러/디테일/솔 행 재현
+function axisRows(sigEntries){
+  const max=sigEntries.length?sigEntries[0][1]:1; const byAx={};
+  sigEntries.forEach(([s,n])=>{const ax=SIG_AXIS[s]||'기타'; if(!byAx[ax])byAx[ax]=[s,n];});
+  const order=['소재','컬러','디테일','솔','토·프로파일','기타'];
+  return order.filter(a=>byAx[a]).map(a=>{const[s,n]=byAx[a];
+    return `<div style="display:flex;gap:10px;font-size:12.5px;margin:3px 0"><span style="width:64px;color:var(--sub);flex:none">${a}</span><b>${esc(sigko(s))}</b> <span style="color:var(--coral)">${stars(n,max)}</span> <span class="small">${n}</span></div>`;}).join('');
+}
+// 워드클라우드: 빈도가 클수록 크게 (12~30px), 상위는 코랄
+function wordcloud(freq,{max=40}={}){
+  const arr=freq.slice(0,max); if(!arr.length)return '';
+  const hi=arr[0][1], lo=arr[arr.length-1][1]||1;
+  const size=n=>12+Math.round((n-lo)/Math.max(1,hi-lo)*18);
+  return `<div style="display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;padding:6px 2px">
+    ${arr.map(([w,n],i)=>`<span title="${n}건" style="font-size:${size(n)}px;font-weight:${n>=hi*0.6?800:600};color:${i<3?'var(--coral)':i<8?'var(--coral2)':'#8a7f7c'};line-height:1.1">${esc(kwko(w))}<sub style="font-size:10px;color:var(--sub);font-weight:400"> ${n}</sub></span>`).join('')}
+  </div>`;
+}
+
+async function reloadAll(){
+  $('#body').innerHTML='<div class="card"><div class="empty">불러오는 중…</div></div>';
+  // 트렌드·이미지는 스냅샷 유무와 무관하게 항상 로드(올린 트렌드가 바로 보이도록)
+  const [snaps,prods,trendsRaw,cads,srcs]=await Promise.all([
+    sel('matrix_snapshots','status=eq.APPROVED&order=approved_at.desc,created_at.desc&limit=40&select=*'),
+    sel('products','select=model_key,storage_path,image_url&limit=8000'),
+    sel('trend_items','select=article_title,publisher,summary_ko,trend_keywords,og_image_url,source_url,season,coverage_group,confidence,source_id,project&order=created_at.desc&limit=1000'),
+    sel('cad_refs','select=subcategory,public_url').catch(()=>[]),
+    sel('sources','select=id,project').catch(()=>[])
+  ]);
+  const imgMap={}; prods.forEach(p=>{imgMap[p.model_key]=p.storage_path?pub(p.storage_path):(p.image_url||'')});
+  window.CADV={}; (cads||[]).forEach(c=>{if(c.public_url)window.CADV[String(c.subcategory||'').replace(/[\s_]/g,'').toLowerCase()]=c.public_url;});
+  // 소스 → 프로젝트 맵 (트렌드를 프로젝트별로 거르기 위함)
+  const S2P={}; (srcs||[]).forEach(s=>{S2P[s.id]=s.project||'MLB|SHOES';});
+  window._S2P=S2P; window._trendsRaw=trendsRaw;
+  // 프로젝트별 최신 승인본 1개씩(같은 27FW라도 MLB/DUVETICA 섞이지 않게)
+  const perProj={}; (snaps||[]).forEach(s=>{const pj=s.project||(s.computed&&s.computed.project)||'MLB|SHOES'; if(!perProj[pj])perProj[pj]=s;});
+  window.PROJ_SNAPS=perProj;
+  window._prodImgMap=imgMap;
+  const projKeys=Object.keys(perProj);
+  const psel=document.getElementById('projSel');
+  if(projKeys.length>1){ psel.style.display=''; psel.innerHTML=projKeys.map(k=>`<option value="${k}">${k.replace('|',' › ')}</option>`).join(''); }
+  await pickProject(projKeys[0]||'MLB|SHOES');
+  return;
+}
+async function pickProject(pj){
+  const snap=(window.PROJ_SNAPS||{})[pj]||null;
+  const comp=snap?.computed||{}, cells=comp.cells||{}; let props=[];
+  if(snap) props=await sel('style_proposals','snapshot_id=eq.'+snap.id+'&select=*&order=line.asc,rank.asc');
+  const imgMap=window._prodImgMap||{};
+  // 트렌드도 현재 프로젝트 것만. 우선 트렌드 자체의 project, 없으면 소스 project, 그것도 없으면 MLB|SHOES.
+  const S2P=window._S2P||{}, raw=(window._trendsRaw||[]).filter(t=>(t.project||(t.source_id&&S2P[t.source_id])||'MLB|SHOES')===pj);
+  const macros=raw.filter(t=>t.coverage_group==='MACRO');
+  const kwmapRow=raw.find(t=>t.coverage_group==='KWMAP');
+  window.KWKO=Object.assign({},KW_KO); if(kwmapRow){try{const m=JSON.parse(kwmapRow.summary_ko||'{}');Object.assign(window.KWKO,m.ko||{});}catch(_){}}
+  const trends=raw.filter(t=>t.coverage_group!=='MACRO'&&t.coverage_group!=='KWMAP');
+  DATA={snap,comp,cells,props,imgMap,trends,macros};
+  const brand=comp.brand||(pj.split('|')[0]), cat=comp.category||(pj.split('|')[1]||'');
+  const isOuter=String(cat).toUpperCase()!=='SHOES';
+  document.body.dataset.outer=isOuter?'1':'';
+  $('#hTitle').textContent=`${brand} ${cat} · ${snap?.planning_season||comp.season||''} 시즌기획 리포트`;
+  const badge=document.getElementById('hProjBadge'); if(badge)badge.textContent=`${brand} › ${cat}`;
+  const psel=document.getElementById('projSel'); if(psel&&psel.value!==pj)psel.value=pj;
+  const totals=comp.totals||{};
+  $('#hStats').innerHTML=[['전체 모델',totals.models],['구조 라벨',totals.labeled],['트렌드 자료',trends.length],['활성 셀',Object.keys(cells).length]]
+    .map(([l,v])=>`<div class="stat"><b>${v??'—'}</b><span>${l}</span></div>`).join('');
+  $('#hUpd').textContent=`${snap?('승인 '+(snap.approved_at?new Date(snap.approved_at).toLocaleString():'—')):'승인된 매트릭스 없음'} · 마지막 갱신 ${new Date().toLocaleTimeString()}`;
+  render();
+}
+function imgFor(r){return (r.model&&DATA.imgMap[r.model])||r.img||'';}
+
+function render(){
+  const {comp,cells,props,trends,macros}=DATA;
+  const hasSnap=Object.keys(cells).length>0;
+  const lines=comp.planLines&&comp.planLines.length?comp.planLines:[...new Set(Object.keys(cells).map(k=>k.split('|')[0]))];
+  const dnas=[...new Set(Object.keys(cells).map(k=>k.split('|')[1]).filter(d=>d!=='ALL'))];
+  const arr=Object.entries(cells);
+  const maxM=Math.max(1,...arr.map(([,c])=>c.models||0));
+  const kwFreqAll=tally(trends.flatMap(t=>String(t.trend_keywords||'').split(/[|,]/).map(s=>s.trim()).filter(Boolean)));
+
+  // ① 트렌드 — 경향 요약 + 8대 매크로 + 워드클라우드 + 대표이미지(가로) + 접힘
+  let h=`<div class="sec-h"><span class="n">01</span><h2>트렌드 흐름 — 이번 시즌 경향</h2></div><div class="card">`;
+  if(!trends.length){
+    h+=`<div class="empty">아직 올라온 트렌드 자료가 없습니다. (관리자 01에서 트렌드 자료·요약본을 적재하면 경향·워드클라우드로 여기에 표시됩니다.)</div></div>`;
+  }else{
+    const kwFreq=kwFreqAll;
+    const phaseFreq=tally(trends.map(t=>t.season).filter(Boolean));
+    const top=kwFreq.slice(0,6).map(([w,n])=>`${kwko(w)}(${n})`);
+    h+=`<div class="read" style="border-left-color:var(--coral);font-size:14px;color:#4a4542">
+      <b>이번 시즌 경향 —</b> 자료 ${trends.length}건에서 가장 많이 잡힌 흐름은 <b>${top.slice(0,3).join(' · ')}</b>입니다.
+      ${top.length>3?`이어서 ${top.slice(3).join(' · ')} 순으로 나타납니다. `:''}
+      ${phaseFreq.length?`자료는 ${phaseFreq.slice(0,3).map(([p,n])=>`${esc(p)} ${n}건`).join(' · ')} 중심입니다.`:''}</div>`;
+    // 8대 통합 트렌드(매크로)
+    if(macros&&macros.length){
+      h+=`<div class="small" style="font-weight:700;margin:16px 0 6px">${macros.length}개 통합 트렌드 <span style="font-weight:400;color:var(--sub)">· 리포트 매크로</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">`;
+      h+=macros.map(m=>{const parts=String(m.summary_ko||'').split('||');const ko=parts[0]||'',dir=parts[1]||'',linesC=(parts[2]||'').split(',').filter(Boolean);
+        const codes=String(m.trend_keywords||'').split('|').filter(Boolean).slice(0,5);
+        return `<div style="border:1px solid var(--line);border-radius:9px;padding:11px">
+          <div style="font-weight:700;font-size:13px;color:var(--coral2)">${esc(m.article_title||'')}</div>
+          ${ko?`<div style="font-size:12.5px;margin-top:1px">${esc(ko)}</div>`:''}
+          ${dir?`<div class="small" style="margin-top:5px;color:#5a5450">${esc(String(dir).slice(0,120))}${String(dir).length>120?'…':''}</div>`:''}
+          ${codes.length?`<div style="margin-top:6px">${codes.map(c=>`<span class="chip">${esc(kwko(c))}</span>`).join('')}</div>`:''}
+          ${linesC.length?`<div class="small" style="margin-top:5px;color:var(--coral2)">→ 연결 매트릭스: ${linesC.map(esc).join(' · ')}</div>`:''}</div>`;}).join('');
+      h+=`</div>`;
+    }
+    // 워드클라우드
+    h+=`<div class="small" style="font-weight:700;margin:16px 0 2px">키워드 워드클라우드 <span style="font-weight:400;color:var(--sub)">· 많이 잡힌 순</span></div>`;
+    h+=wordcloud(kwFreq);
+    // 경향 대표 이미지 — 키워드 많이 잡힌 순, 13+ 가로 캐러셀, 아래 기사 타이틀
+    const score=t=>String(t.trend_keywords||'').split(/[|,]/).map(s=>s.trim()).reduce((a,w)=>a+((kwFreq.find(x=>x[0]===w)||[0,0])[1]),0);
+    const ranked=[...trends].map(t=>({t,s:score(t)})).sort((a,b)=>b.s-a.s);
+    const withImg=ranked.filter(r=>r.t.og_image_url);
+    if(withImg.length){
+      h+=`<div class="small" style="font-weight:700;margin:16px 0 6px">경향 대표 이미지 <span style="font-weight:400;color:var(--sub)">· 키워드 많이 잡힌 순 · 옆으로 넘겨보기 →</span></div>
+        <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory">
+        ${withImg.map((r,i)=>`<a class="src" href="${esc(r.t.source_url||'#')}" target="_blank" style="flex:0 0 160px;scroll-snap-align:start">
+          <div style="position:relative"><img src="${esc(r.t.og_image_url)}" loading="lazy" style="width:160px;height:120px;object-fit:cover;border-radius:8px;background:#f4f1ef" onerror="this.parentNode.parentNode.style.display='none'">
+          <span style="position:absolute;top:5px;left:5px;background:var(--coral);color:#fff;font-size:10px;font-weight:700;border-radius:5px;padding:1px 6px">${i+1}</span></div>
+          <div class="small" style="margin-top:4px;width:160px;line-height:1.3;color:#6a625f;max-height:32px;overflow:hidden">${esc(String(r.t.article_title||'').slice(0,52))}</div></a>`).join('')}</div>`;
+    }
+    // 경향을 이끄는 자료 TOP 5
+    h+=`<div class="small" style="font-weight:700;margin:14px 0 6px">경향을 이끄는 자료 TOP 5</div>`;
+    h+=ranked.slice(0,5).map((r,i)=>`<div style="display:flex;gap:10px;border-top:1px solid var(--line);padding:8px 0">
+      <div style="font-weight:800;color:var(--coral);width:20px;flex:none">${i+1}</div>
+      <div><div style="font-weight:600;font-size:13px">${esc(r.t.article_title||'(제목없음)')} ${r.t.season?`<span class="tag">${esc(r.t.season)}</span>`:''}${r.t.publisher?`<span class="small"> · ${esc(r.t.publisher)}</span>`:''}</div>
+        ${r.t.summary_ko?`<div class="small" style="margin-top:2px">${esc(String(r.t.summary_ko).slice(0,150))}${String(r.t.summary_ko).length>150?'…':''}</div>`:''}
+        <div style="margin-top:3px">${String(r.t.trend_keywords||'').split(/[|,]/).map(s=>s.trim()).filter(Boolean).slice(0,6).map(w=>`<span class="chip">${esc(kwko(w))}</span>`).join('')}</div></div></div>`).join('');
+    // 전체 기사 목록 — 접힘
+    h+=`<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--coral2)">전체 자료 ${trends.length}건 펼치기 ▾</summary>
+      <div style="margin-top:8px">${ranked.map(r=>`<div style="border-top:1px solid var(--line);padding:6px 0">
+        <div style="font-weight:600;font-size:12.5px">${esc(r.t.article_title||'(제목없음)')} ${r.t.season?`<span class="tag">${esc(r.t.season)}</span>`:''}${r.t.publisher?`<span class="small"> · ${esc(r.t.publisher)}</span>`:''}${r.t.confidence?`<span class="small"> · ${esc(r.t.confidence)}급</span>`:''}</div>
+        ${r.t.summary_ko?`<div class="small" style="margin-top:2px">${esc(String(r.t.summary_ko).slice(0,180))}${String(r.t.summary_ko).length>180?'…':''}</div>`:''}
+        ${r.t.source_url?`<a class="src" href="${esc(r.t.source_url)}" target="_blank">원문 ↗</a>`:''}</div>`).join('')}</div></details>`;
+    h+=`</div>`;
+  }
+
+  if(!hasSnap){
+    h+=`<div class="card"><div class="empty">아직 승인된 매트릭스가 없습니다. 관리자가 04에서 매트릭스를 계산·저장하고 05에서 승인하면 매트릭스·구성비·스타일 추천이 여기에 표시됩니다.</div></div>`;
+    $('#body').innerHTML=h; return;
+  }
+
+  // ② 매트릭스 히트맵
+  h+=`<div class="sec-h"><span class="n">02</span><h2>매트릭스 — 카테고리 × 라이프스타일</h2></div>`;
+  // 핵심 트렌드 → 관련 칸 (트렌드를 매트릭스에서 한 번 더 짚기)
+  const topTrend=kwFreqAll.slice(0,6);
+  const trendToCells=topTrend.map(([code])=>{
+    const hits=arr.filter(([,c])=>c.trendKw&&c.trendKw[code]).map(([k])=>k.replace('|',' × '));
+    return {code,hits};
+  }).filter(x=>x.hits.length);
+  if(trendToCells.length){
+    h+=`<div class="card" style="background:#fdf3f2;border-color:#f2d7d9"><div class="small" style="font-weight:700;margin-bottom:6px;color:var(--coral2)">핵심 트렌드 → 관련 칸 <span style="font-weight:400;color:var(--sub)">· 이 트렌드는 여기서 보세요</span></div>
+      ${trendToCells.map(x=>`<div style="font-size:12.5px;margin:3px 0"><b>${esc(kwko(x.code))}</b> → ${x.hits.slice(0,5).map(esc).join(' · ')}${x.hits.length>5?' 외':''}</div>`).join('')}</div>`;
+  }
+  h+=`<div class="card"><div style="overflow-x:auto"><div class="matrix" style="grid-template-columns:96px repeat(${dnas.length},1fr)">
+      <div class="mc hd"></div>${dnas.map(d=>`<div class="mc hd">${esc(d)}</div>`).join('')}`;
+  for(const line of lines){h+=`<div class="mc hd">${esc(line)}</div>`;
+    const mono=cells[line+'|ALL'];
+    if(mono){const bg=`rgba(29,58,47,${(0.05+0.4*(mono.models/maxM)).toFixed(3)})`;
+      h+=`<div class="mc" style="grid-column:span ${dnas.length};background:${bg}" onclick="showCell('${line}|ALL')"><b>${mono.models}</b> <span class="small">SKU ${mono.skus} · 브랜드 ${(mono.brands||[]).length} · 통짜</span></div>`;
+    } else for(const d of dnas){const c=cells[line+'|'+d];
+      if(!c){h+=`<div class="mc" style="opacity:.35">—</div>`;continue;}
+      const bg=`rgba(29,58,47,${(0.05+0.4*(c.models/maxM)).toFixed(3)})`, ink=(c.models/maxM)>0.5?'#fff':'var(--ink)';
+      h+=`<div class="mc" style="background:${bg};color:${ink}" onclick="showCell('${line}|${d}')"><b>${c.models}</b> <span class="small" style="color:${ink}">SKU ${c.skus}·Br ${(c.brands||[]).length}${c.mentions?` · 자료 ${c.mentions}`:''}</span></div>`;
+    }
+  }
+  h+=`</div></div><div class="small" style="margin-top:8px">칸을 클릭하면 그 칸의 레퍼런스와 스타일 추천이 아래에 열립니다. 색이 진할수록 모델 수가 많은 강세 칸입니다.</div>
+    <div id="cellDetail" style="margin-top:12px"></div></div>`;
+
+  // ③ 강세·공백 판정
+  const active=arr.map(([k,c])=>({k,...c}));
+  const strong=[...active].sort((a,b)=>b.models-a.models).slice(0,4);
+  const trendHot=[...active].filter(c=>c.mentions).sort((a,b)=>b.mentions-a.mentions).slice(0,3);
+  const empties=[]; for(const line of lines)for(const d of dnas)if(!cells[line+'|'+d]&&!cells[line+'|ALL'])empties.push(`${line}×${d}`);
+  h+=`<div class="sec-h"><span class="n">03</span><h2>강세·공백 판정</h2></div><div class="card">
+    <div class="read"><b>강세(레퍼런스 두꺼움):</b> ${strong.map(c=>`${c.k.replace('|',' × ')} (${c.models})`).join(' · ')||'—'}.
+    ${trendHot.length?`<br><b>트렌드가 몰리는 칸:</b> ${trendHot.map(c=>`${c.k.replace('|',' × ')} (자료 ${c.mentions})`).join(' · ')} — 지금 시장이 투자하는 방향.`:''}
+    ${empties.length?`<br><b>공백(선점 후보):</b> ${empties.slice(0,8).join(' · ')}${empties.length>8?' 외':''} — 경쟁 레퍼런스가 거의 없는 화이트스페이스.`:''}</div></div>`;
+
+  // ④ 전체 구성비율 — 도넛(라인·DNA·서브카테고리) + 참고 브랜드 리스트
+  const byLine=lines.map(l=>[l,(cells[l+'|ALL']?.models||0)+dnas.reduce((s,d)=>s+(cells[l+'|'+d]?.models||0),0)]).filter(x=>x[1]).sort((a,b)=>b[1]-a[1]);
+  const byDna=dnas.map(d=>[d,lines.reduce((s,l)=>s+(cells[l+'|'+d]?.models||0),0)]).filter(x=>x[1]).sort((a,b)=>b[1]-a[1]);
+  const allRefs=arr.flatMap(([,c])=>c.refs||[]);
+  let subAll=tally(allRefs.map(r=>r.sub));
+  const uncl=subAll.find(x=>x[0]==='미분류'); const bySub=subAll.filter(x=>x[0]!=='미분류').slice(0,12);
+  const brands=[...new Set(allRefs.map(r=>r.brand).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  h+=`<div class="sec-h"><span class="n">04</span><h2>전체 구성비율</h2></div>
+   <div class="card"><div style="display:grid;grid-template-columns:1fr 1fr;gap:22px">
+    <div><div class="small" style="font-weight:700;margin-bottom:6px">라인(카테고리)별</div>${donut(byLine)}</div>
+    <div><div class="small" style="font-weight:700;margin-bottom:6px">라이프스타일(DNA)별</div>${donut(byDna)}</div>
+    <div><div class="small" style="font-weight:700;margin-bottom:6px">서브카테고리별</div>${donut(bySub,{note:uncl?`미분류 ${uncl[1]}개는 그래프에서 제외`:''})}</div>
+    <div><div class="small" style="font-weight:700;margin-bottom:6px">참고 브랜드 ${brands.length}개</div>
+      <div style="font-size:12px;line-height:1.9">${brands.map(b=>`<span class="chip">${esc(b)}</span>`).join('')||'—'}</div></div>
+   </div></div>`;
+
+  // ⑤ 스타일 추천 — 라이프스타일별 착장(피팅컷) 이미지 나열, 6개 + 더보기
+  h+=`<div class="sec-h"><span class="n">05</span><h2>스타일 추천 — 라이프스타일별 착장</h2></div>`;
+  const shots={};
+  props.forEach(p=>{const life=p.lifestyle||'기타';
+    const news=Array.isArray(p.points&&p.points.news)?p.points.news:((p.points&&p.points.new_image)?[{new_image:p.points.new_image,meta:p.points.meta}]:[]);
+    news.forEach(n=>{ if(!n||!n.new_image)return; if(!String(n.meta||'').includes('피팅컷'))return;  // 사람 착용(피팅컷)만
+      (shots[life]=shots[life]||[]).push({img:n.new_image,sub:p.subcategory||(p.points&&p.points.subcategory)||''}); });});
+  const LORDER=['URBAN_LUX','LUX_ACTIVE','HOLIDAY_CAPSULE','WELLNESS','COMMUTE','STREET','OUTDOOR','URBAN','WELLNESS_ACTIVE','APRES_SKI'];
+  const lifes=Object.keys(shots).sort((a,b)=>{const ia=LORDER.indexOf(a),ib=LORDER.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
+  if(!lifes.length){
+    h+=`<div class="card"><div class="empty">사람 착용(피팅컷) 스타일 이미지가 아직 없습니다. 관리자가 04에서 피팅컷을 생성·확정하고 승인하면 여기에 라이프스타일별로 표시됩니다.</div></div>`;
+  } else {
+    lifes.forEach((life,li)=>{ const arr=shots[life]; const FIRST=6; const moreId='more_'+li;
+      h+=`<div class="card"><div style="font-weight:800;font-size:16px;margin-bottom:10px">${esc(life)} <span class="small" style="opacity:.6">· ${arr.length}착장</span></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
+          ${arr.map((s,i)=>`<div style="display:${i<FIRST?'block':'none'}" data-more="${moreId}">
+            <div style="position:relative;width:100%;aspect-ratio:3/4;background:#f4f1ef;border-radius:8px;overflow:hidden;border:1px solid var(--line);cursor:zoom-in" onclick="hoverPrev('${esc(s.img)}')">
+              <img src="${esc(s.img)}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.parentNode.style.opacity=.3">
+              <button onclick="event.stopPropagation();hoverPrev('${esc(s.img)}')" title="크게 보기" style="position:absolute;top:5px;right:5px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:6px;padding:2px 7px;font-size:12px;cursor:pointer">🔍</button></div>
+            <div class="small" style="margin-top:4px;color:var(--sub);display:flex;justify-content:space-between;gap:6px;align-items:center">
+              <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.sub||'')}</span>
+              <a href="${esc(s.img)}" onclick="dlImg('${esc(s.img)}','${esc(life)}_${i+1}.jpg');return false;" title="이미지 다운로드" style="color:var(--coral2);font-weight:700;text-decoration:none;flex:0 0 auto">⬇</a>
+            </div>
+          </div>`).join('')}
+        </div>
+        ${arr.length>FIRST?`<div style="text-align:center;margin-top:10px"><button class="btn" onclick="showMore('${moreId}',this)">더보기 (+${arr.length-FIRST})</button></div>`:''}
+      </div>`;
+    });
+  }
+  // ⑥ CAD 도면 — 라이프스타일별 접이식(기본 접힘, 누르면 펼침)
+  const cadShots={};
+  props.forEach(p=>{const life=p.lifestyle||'기타'; const ci=p.points&&p.points.cad_image; const sub=p.subcategory||(p.points&&p.points.subcategory)||'';
+    if(ci){ (cadShots[life]=cadShots[life]||[]); if(!cadShots[life].some(x=>x.img===ci)) cadShots[life].push({img:ci,sub}); }});
+  const cadLifes=Object.keys(cadShots).sort((a,b)=>{const ia=LORDER.indexOf(a),ib=LORDER.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
+  if(cadLifes.length){
+    h+=`<div class="sec-h"><span class="n">06</span><h2>CAD 도면 — 라이프스타일별</h2></div>`;
+    cadLifes.forEach((life,li)=>{ const arr=cadShots[life]; const cid='cadfold_'+li;
+      h+=`<div class="card">
+        <button class="btn" style="width:100%;text-align:left;font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px" onclick="toggleFold('${cid}',this)">
+          <span class="fold-arrow">▸</span> ${esc(life)} <span class="small" style="opacity:.6;font-weight:400">· CAD ${arr.length}</span></button>
+        <div id="${cid}" style="display:none;margin-top:10px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px">
+            ${arr.map(c=>`<div>
+              <div style="position:relative;width:100%;aspect-ratio:3/4;background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;cursor:zoom-in" onclick="hoverPrev('${esc(c.img)}')">
+                <img src="${esc(c.img)}" loading="lazy" style="width:100%;height:100%;object-fit:contain" onerror="this.parentNode.style.opacity=.3">
+                <button onclick="event.stopPropagation();hoverPrev('${esc(c.img)}')" title="크게 보기" style="position:absolute;top:5px;right:5px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:6px;padding:2px 7px;font-size:12px;cursor:pointer">🔍</button></div>
+              ${c.sub?`<div class="small" style="margin-top:4px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.sub)}</div>`:''}
+            </div>`).join('')}
+          </div>
+        </div>
+      </div>`;
+    });
+  }
+  // ⑦ 제품컷 — 맨 아래 "제품컷 보기"로 펼치면 제품샷이 쭉(라이프별)
+  const prodShots={};
+  props.forEach(p=>{const life=p.lifestyle||'기타';
+    const news=Array.isArray(p.points&&p.points.news)?p.points.news:((p.points&&p.points.new_image)?[{new_image:p.points.new_image,meta:p.points.meta}]:[]);
+    news.forEach(n=>{ if(!n||!n.new_image)return; const mt=String(n.meta||''); if(!(/제품샷|제품컷|리얼/.test(mt))||mt.includes('피팅컷'))return;  // 제품컷만
+      (prodShots[life]=prodShots[life]||[]).push({img:n.new_image,sub:p.subcategory||(p.points&&p.points.subcategory)||''}); });});
+  const prodLifes=Object.keys(prodShots).sort((a,b)=>{const ia=LORDER.indexOf(a),ib=LORDER.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
+  if(prodLifes.length){
+    const totalP=prodLifes.reduce((s,l)=>s+prodShots[l].length,0);
+    h+=`<div class="sec-h"><span class="n">07</span><h2>제품컷</h2></div>`;
+    h+=`<div class="card">
+      <button class="btn" style="width:100%;text-align:left;font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px" onclick="toggleFold('prodfold',this)">
+        <span class="fold-arrow">▸</span> 제품컷 보기 <span class="small" style="opacity:.6;font-weight:400">· 총 ${totalP}컷</span></button>
+      <div id="prodfold" style="display:none;margin-top:12px">
+        ${prodLifes.map(life=>`<div style="margin-bottom:14px">
+          <div style="font-weight:700;font-size:14px;margin-bottom:8px;color:var(--sub)">${esc(life)} · ${prodShots[life].length}</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px">
+            ${prodShots[life].map((s,i)=>`<div>
+              <div style="position:relative;width:100%;aspect-ratio:3/4;background:#f6f4ef;border:1px solid var(--line);border-radius:8px;overflow:hidden;cursor:zoom-in" onclick="hoverPrev('${esc(s.img)}')">
+                <img src="${esc(s.img)}" loading="lazy" style="width:100%;height:100%;object-fit:contain" onerror="this.parentNode.style.opacity=.3">
+                <button onclick="event.stopPropagation();hoverPrev('${esc(s.img)}')" title="크게 보기" style="position:absolute;top:5px;right:5px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:6px;padding:2px 7px;font-size:12px;cursor:pointer">🔍</button></div>
+              <div class="small" style="margin-top:4px;color:var(--sub);display:flex;justify-content:space-between;gap:6px;align-items:center">
+                <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.sub||'')}</span>
+                <a href="${esc(s.img)}" onclick="dlImg('${esc(s.img)}','${esc(life)}_prod_${i+1}.jpg');return false;" title="다운로드" style="color:var(--coral2);font-weight:700;text-decoration:none;flex:0 0 auto">⬇</a>
+              </div>
+            </div>`).join('')}
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+  h+=`</div>`;
+  $('#body').innerHTML=h;
+  if(openCell&&DATA.cells[openCell])showCell(openCell,true);
+}
+window.toggleFold=(id,btn)=>{const el=document.getElementById(id);if(!el)return;const open=el.style.display==='none';el.style.display=open?'block':'none';const a=btn&&btn.querySelector('.fold-arrow');if(a)a.textContent=open?'▾':'▸';};
+window.hoverPrev=(src)=>{let el=document.getElementById('hoverPrevBox');
+  if(!el){el=document.createElement('div');el.id='hoverPrevBox';
+    el.style.cssText='position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.75);cursor:zoom-out';
+    el.innerHTML='<img style="max-width:88vw;max-height:88vh;border-radius:12px;box-shadow:0 12px 48px rgba(0,0,0,.5);background:#fff">';
+    el.onclick=()=>{el.style.display='none';}; document.body.appendChild(el);}
+  el.querySelector('img').src=src; el.style.display='flex';};
+window.hoverHide=()=>{const el=document.getElementById('hoverPrevBox'); if(el)el.style.display='none';};
+window.dlImg=async(url,name)=>{try{const r=await fetch(url);const b=await r.blob();const u=URL.createObjectURL(b);
+  const a=document.createElement('a');a.href=u;a.download=name||'image.jpg';document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),4000);}catch(e){window.open(url,'_blank');}};
+window.showMore=(id,btn)=>{document.querySelectorAll('[data-more="'+id+'"]').forEach(el=>{el.style.display='block';}); if(btn)btn.style.display='none';};
+window.toggleStyleCell=(gid)=>{const el=document.getElementById(gid);if(!el)return;
+  const open=el.style.display==='none';el.style.display=open?'block':'none';
+  const b=document.getElementById('btn_'+gid);if(b)b.classList.toggle('p',open);
+  if(open)el.scrollIntoView({behavior:'smooth',block:'nearest'});};
+window.selSub=(gid,idx,n)=>{for(let i=0;i<n;i++){const pane=document.getElementById(gid+'_'+i);if(pane)pane.style.display=i===idx?'block':'none';
+  const btn=document.querySelector(`[data-tab="${gid}_${i}"]`); if(btn)btn.classList.toggle('p',i===idx);}};
+
+const subKey=s=>String(s||'').replace(/[\s_]/g,'').toLowerCase();
+function styleCard(p){
+  const pts=p.points||{}; const sub=pts.subcategory||p.subcategory||'';
+  const refs=(p.refs||[]);
+  // AI 생성 이미지 — 이 서브카테고리 것만(다른 카테고리 섞임 방지)
+  let news=Array.isArray(pts.news)&&pts.news.length?pts.news:(pts.new_image?[{new_image:pts.new_image,new_points:pts.new_points,new_trend:pts.new_trend,sub}]:[]);
+  news=news.filter(n=>{
+    if(n.sub) return subKey(n.sub)===subKey(sub);          // 태그 있으면 서브카테고리 일치만
+    const m=String(n.meta||'').match(/베이스 CAD=([^\s·]+)/); // 옛 카드: 베이스 CAD가 다른 서브면 제외
+    if(m && m[1] && subKey(m[1])!==subKey(sub)) return false;
+    return true;
+  });
+  const sigEntries=Object.entries(pts.signals||{}).sort((a,b)=>b[1]-a[1]);
+  const rows=axisRows(sigEntries);
+  const cid='rf'+Math.random().toString(36).slice(2,8);
+  const dist=pts.dist||{};
+  // 도표는 카테고리가 2개 이상일 때만(100% 단일값은 도표 의미 없음)
+  const useD=d=>Array.isArray(d)&&d.filter(x=>x&&x[1]).length>=2;
+  const donuts=[['컬러',dist.color],['소재',dist.material],['프린트',dist.print]].filter(([,d])=>useD(d));
+  return `<div class="sc">
+    <div style="padding:9px 16px;border-bottom:1px solid var(--line);background:#faf6f5">
+      <span class="tag" style="background:var(--g1);color:#fff">MASS MARKET 제안</span>
+      ${news.length?'<span class="tag" style="background:var(--coral);color:#fff">★ AI 스타일 '+news.length+'</span>':''}
+      <span class="small">이 서브카테고리에서 지금 가장 많은 형태 — 안전한 대량 전개</span></div>
+    <div style="padding:14px 16px">
+      <h3 style="margin:0">${esc(sub||p.title||'')} <span class="tag">${esc(p.line||'')}</span><span class="tag">${esc(p.lifestyle||'')}</span></h3>
+      <div class="small" style="margin-top:2px">${pts.models?`${pts.models}모델`:''}${pts.brands?` · ${pts.brands}브랜드`:''}${p.season_basis?` · 기준 ${p.season_basis.base||0}/선행 ${p.season_basis.leading||0}`:''}</div>
+      ${rows?`<div class="small" style="margin:12px 0 4px;font-weight:700">지배 속성 <span style="font-weight:400;color:var(--sub)">· 데이터 집계 · 별=출현 강도</span></div>${rows}`:'<div class="small" style="margin-top:10px;color:var(--sub)">구조 신호 데이터가 아직 없습니다.</div>'}
+      ${p.narrative?`<div class="read" style="margin-top:10px">${esc(p.narrative)}</div>`:''}
+    </div>
+    ${donuts.length?`<div style="padding:12px 16px;border-top:1px solid var(--line);background:#fcfbfa">
+      <div style="display:grid;grid-template-columns:repeat(${donuts.length},1fr);gap:16px;max-width:${donuts.length*180}px">
+        ${donuts.map(([lab,d])=>`<div><div class="small" style="font-weight:700;text-align:center;margin-bottom:4px">${lab}</div>${donut(d,{size:96,unit:''})}</div>`).join('')}
+      </div></div>`:''}
+    ${refs.length?`<div style="padding:12px 16px 16px;border-top:1px solid var(--line)"><div class="small" style="font-weight:700;margin:0 0 8px">대량 시장 레퍼런스 ${refs.length} <span style="font-weight:400;color:var(--sub)">· 서브카테고리 잠금</span></div>
+      <div class="grid6">${refs.slice(0,6).map(r=>refThumb(r)).join('')}</div>
+      ${refs.length>6?`<div class="grid6 more-${cid}" style="display:none;margin-top:8px">${refs.slice(6).map(r=>refThumb(r)).join('')}</div>
+        <div style="text-align:center;margin-top:10px"><button class="btn" onclick="document.querySelector('.more-${cid}').style.display='grid';this.remove()">더보기 (+${refs.length-6})</button></div>`:''}</div>`:''}
+    ${news.length?`<div style="border-top:1px solid var(--line);padding:12px 16px 16px;background:#fdf6f2">
+      <div class="small" style="font-weight:700;margin:0 0 8px"><span class="tag" style="background:var(--coral);color:#fff">NEW 제안</span> AI 생성 이미지 ${news.length}건 <span style="font-weight:400;color:var(--sub)">· 트렌드·MLB 로고 반영</span></div>
+      <div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:6px">
+      ${news.map(nw=>`<div style="flex:0 0 200px">
+        <img src="${esc(nw.new_image)}" loading="lazy" style="width:200px;height:150px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:#fff" onerror="this.style.display='none'">
+        ${(nw.new_points||[]).length?`<div class="small" style="margin-top:5px">${(nw.new_points||[]).map(pt=>Array.isArray(pt)?esc(pt[0]):'').filter(Boolean).slice(0,4).join(' · ')}</div>`:''}
+        ${nw.new_trend?(()=>{const FK=/(boot|mule|slipper|sandal|slide|clog|loafer|ballet|pump|thong|derby|oxford|dress|heel|wedge|platform|slouch|biker|riding|knee|tall|hitop|high_top)/i;const t=String(nw.new_trend).split(/[·,]/).map(s=>s.trim()).filter(x=>x&&!FK.test(x)).join(' · ');return t?`<div class="small" style="color:var(--coral2);margin-top:2px">트렌드: ${esc(t)}</div>`:'';})():''}
+        ${nw.meta?`<div class="small" style="color:var(--sub);margin-top:2px;line-height:1.3">${esc(String(nw.meta).slice(0,90))}</div>`:''}</div>`).join('')}
+      </div></div>`:''}
+  </div>`;
+}
+function refThumb(r){const im=imgFor(r);return `<div><img class="ph" src="${esc(im)}" loading="lazy" onerror="this.style.opacity=.2"><div class="small" style="max-height:14px;overflow:hidden">${esc(r.brand||'')}</div></div>`;}
+
+window.showCell=(key,keep)=>{
+  openCell=key; const c=DATA.cells[key]; if(!c)return;
+  const [line,dna]=key.split('|');
+  const groups={}; (c.refs||[]).forEach(r=>{const g=r.sub||'미분류';(groups[g]=groups[g]||[]).push(r);});
+  const gl=Object.entries(groups).sort((a,b)=>b[1].length-a[1].length);
+  const topSub=gl.slice(0,3).map(([s,rs])=>`${s}(${rs.length})`).join(' · ');
+  const sig=Object.entries(c.sigs||{}).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([s])=>s).join(' · ');
+  const trTop=Object.entries(c.trendKw||{}).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([w])=>kwko(w)).join(' · ');
+  const brs=(c.brands||[]).slice(0,6).join(', ');
+  let h=`<div class="card" style="margin:0;border-color:var(--coral)">
+    <div class="ttl"><h3 style="margin:0">${esc(line)} × ${esc(dna)}</h3><button class="btn" onclick="closeCell()">닫기 ✕</button></div>
+    <div class="small" style="margin:4px 0 6px">모델 ${c.models} · SKU ${c.skus} · 브랜드 ${(c.brands||[]).length}${c.mentions?` · 트렌드 자료 ${c.mentions}`:''}</div>
+    <div class="read" style="margin:0 0 10px">이 칸은 총 <b>${c.models}모델·${(c.brands||[]).length}브랜드</b>로, 지배 서브카테고리는 <b>${esc(topSub||'—')}</b>입니다.${sig?` 주요 구조 신호는 ${esc(sig)}이며,`:''} 참고 브랜드는 ${esc(brs||'—')} 등입니다.${trTop?` <b>이 칸과 연결된 상위 트렌드: ${esc(trTop)}.</b>`:''}${c.mentions?` 트렌드 자료 ${c.mentions}건이 이 방향과 연결됩니다.`:''}</div>`;
+  h+=gl.map(([sub,rs])=>`<div style="border:1px solid var(--line);border-radius:9px;padding:10px;margin-bottom:10px;background:#fcfbf8">
+    <div style="font-weight:700;margin-bottom:6px">${esc(sub)} <span class="small">· ${rs.length}모델</span></div>
+    <div class="grid6">${rs.slice(0,12).map(r=>{const im=imgFor(r);return `<div><img class="ph" src="${esc(im)}" loading="lazy" onerror="this.style.opacity=.2"><div class="small" style="max-height:14px;overflow:hidden">${esc(r.brand||'')}</div></div>`;}).join('')}</div></div>`).join('')||'<div class="small">레퍼런스 없음</div>';
+  h+=`</div>`;
+  $('#cellDetail').innerHTML=h;
+  if(!keep)$('#cellDetail').scrollIntoView({behavior:'smooth',block:'nearest'});
+};
+window.closeCell=()=>{openCell=null;$('#cellDetail').innerHTML='';};
+
+function expandPanes(root){ // 정적본은 JS가 없으니 모든 셀·탭 카드를 펼쳐서 보이게
+  root.querySelectorAll('[id^="sc"]').forEach(el=>{if(el.style&&el.style.display==='none')el.style.display='block';});
+  root.querySelectorAll('.pane').forEach(p=>{p.style.display='block';p.style.margin='0 0 16px';});
+  root.querySelectorAll('.subtabs').forEach(t=>t.remove());
+  root.querySelectorAll('button').forEach(b=>{const oc=b.getAttribute&&b.getAttribute('onclick');if(oc&&/toggleStyleCell/.test(oc))b.remove();});
+  root.querySelectorAll('[class*="more-"]').forEach(m=>m.style.display='grid');
+  root.querySelectorAll('.sc button').forEach(b=>{if(/더보기/.test(b.textContent))b.remove();});
+}
+function frozenScript(){ // 저장본에 심을 얼린 데이터(스크립트보다 먼저 실행되게 head에 넣음)
+  const slim={snap:DATA.snap,comp:DATA.comp,cells:DATA.cells,props:DATA.props,imgMap:DATA.imgMap,trends:DATA.trends,macros:DATA.macros};
+  const payload={DATA:slim,KWKO:window.KWKO||{},CADV:window.CADV||{}};
+  const json=JSON.stringify(payload).replace(/<\//g,'<\\/');
+  return `<script>window.__MLB_FROZEN__=${json};<\/script>`;
+}
+function saveHTML(){
+  const clone=document.documentElement.cloneNode(true);
+  clone.querySelectorAll('.header .btn').forEach(b=>b.remove());  // 저장·새로고침 버튼 제거
+  // 스크립트는 유지(클릭 인터랙션 살림) + 얼린 데이터를 head 맨 앞에 삽입
+  const head=clone.querySelector('head');
+  if(head) head.insertAdjacentHTML('afterbegin',frozenScript());
+  const html='<!doctype html>\n'+clone.outerHTML;
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`${(DATA?.comp?.brand||'리포트')}_${(DATA?.comp?.category||'')}_시즌기획_${(DATA?.snap?.planning_season||DATA?.comp?.season||'')}_${new Date().toISOString().slice(0,10)}.html`.replace(/[\\/\s]+/g,'_');a.click();
+}
+// 스타일 카드만 내보내기 — 클릭 토글 유지(작은 스크립트만 심음)
+function saveStyleHTML(){
+  const sec=[...document.querySelectorAll('.sec-h')].find(s=>/스타일 추천/.test(s.textContent));
+  if(!sec){alert('스타일 추천 섹션이 아직 없습니다.');return;}
+  const wrap=document.createElement('div'); wrap.appendChild(sec.cloneNode(true));
+  let el=sec.nextElementSibling;
+  while(el&&!el.classList.contains('sec-h')){wrap.appendChild(el.cloneNode(true));el=el.nextElementSibling;}
+  const title=`${(DATA?.comp?.brand||'')} ${(DATA?.comp?.category||'')} 스타일 추천 · ${(DATA?.snap?.planning_season||DATA?.comp?.season||'')}`;
+  const miniJs=`<script>
+    window.toggleFold=function(id,btn){var el=document.getElementById(id);if(!el)return;var open=el.style.display==='none';el.style.display=open?'block':'none';var a=btn&&btn.querySelector('.fold-arrow');if(a)a.textContent=open?'▾':'▸';};
+    window.hoverPrev=function(src){var el=document.getElementById('hoverPrevBox');if(!el){el=document.createElement('div');el.id='hoverPrevBox';el.style.cssText='position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.75);cursor:zoom-out';el.innerHTML='<img style="max-width:88vw;max-height:88vh;border-radius:12px;box-shadow:0 12px 48px rgba(0,0,0,.5);background:#fff">';el.onclick=function(){el.style.display='none';};document.body.appendChild(el);}el.querySelector('img').src=src;el.style.display='flex';};
+    window.hoverHide=function(){var el=document.getElementById('hoverPrevBox');if(el)el.style.display='none';};
+    window.dlImg=function(url,name){fetch(url).then(function(r){return r.blob();}).then(function(b){var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download=name||'image.jpg';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},4000);}).catch(function(){window.open(url,'_blank');});};
+    window.showMore=function(id,btn){var els=document.querySelectorAll('[data-more="'+id+'"]');for(var i=0;i<els.length;i++){els[i].style.display='block';}if(btn)btn.style.display='none';};
+    window.toggleStyleCell=function(gid){var el=document.getElementById(gid);if(!el)return;var open=el.style.display==='none';el.style.display=open?'block':'none';var b=document.getElementById('btn_'+gid);if(b)b.classList.toggle('p',open);if(open)el.scrollIntoView({behavior:'smooth',block:'nearest'});};
+    window.selSub=function(gid,idx,n){for(var i=0;i<n;i++){var pane=document.getElementById(gid+'_'+i);if(pane)pane.style.display=i===idx?'block':'none';var btn=document.querySelector('[data-tab="'+gid+'_'+i+'"]');if(btn)btn.classList.toggle('p',i===idx);}};
+  <\/script>`;
+  const html=`<!doctype html><html lang="ko"><head>${document.head.innerHTML}${miniJs}</head><body><div class="wrap">
+    <div class="header"><h1>${title}</h1><div class="thesis">서브카테고리별 MASS·NEW 스타일 제안과 근거 분포. 칸·서브카테고리를 누르면 열립니다.</div></div>
+    ${wrap.innerHTML}</div></body></html>`;
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`${(DATA?.comp?.brand||'스타일')}_${(DATA?.comp?.category||'')}_스타일추천_${(DATA?.snap?.planning_season||DATA?.comp?.season||'')}_${new Date().toISOString().slice(0,10)}.html`.replace(/[\\/\s]+/g,'_');a.click();
+}
+
+// 저장된 정적 리포트(얼린 데이터)면 fetch 없이 그대로 렌더 — 매트릭스·디자인 클릭 동작 유지
+if(window.__MLB_FROZEN__){
+  try{ const F=window.__MLB_FROZEN__;
+    window.KWKO=F.KWKO||{}; window.CADV=F.CADV||{};
+    DATA=F.DATA; render();
+    $('#hTitle')&&(DATA.snap)&&($('#hTitle').textContent=`${(DATA.comp?.brand||'')} ${(DATA.comp?.category||'')} · ${DATA.snap.planning_season||DATA.comp?.season||''} 시즌기획 리포트`);
+  }catch(e){ $('#body').innerHTML='<div class="card"><div class="empty">저장본 로드 오류: '+e.message+'</div></div>'; }
+}else{
+  reloadAll();
+  setInterval(reloadAll,3600000);   // 1시간에 한 번만 자동 갱신 (그 외엔 ↻ 버튼으로)
+}
+</script></body></html>
