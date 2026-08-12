@@ -53,7 +53,7 @@ progress{width:100%;height:8px}
 </head>
 <body>
 <header>
-  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-144</span></h1>
+  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-145</span></h1>
   <div id="scopeBar" class="hide" style="display:flex;gap:6px;align-items:center;margin-left:16px">
     <select id="selBrand" style="padding:4px 6px;font-size:12px"></select>
     <span style="opacity:.4">›</span>
@@ -1475,7 +1475,7 @@ function signalsFromAxes(a){const s=[];
 let labStop=false,labTargets=[];
 $('#btnLabPreview').onclick=async()=>{
   const labeled=new Set((await sel('labels','select=model_key')).map(r=>r.model_key));
-  let rows=(await sel('products','select=id,model_key,product_name,brand_norm,subcategory,line,lifestyle,storage_path,image_url,project,category&excluded=eq.false&image_url=not.is.null&limit=3000')).filter(inScope);
+  let rows=(await sel('products','select=id,model_key,product_name,brand_norm,subcategory,line,lifestyle,storage_path,image_url,project,category&excluded=eq.false&or=(image_url.not.is.null,storage_path.not.is.null)&limit=3000')).filter(inScope);
   const RELABEL=$('#selTarget').value==='relabel';
   const labeledStyle=new Set(rows.filter(r=>labeled.has(r.model_key)).map(styleKey));   // 이미 라벨된 스타일(어느 컬러든)
   const byModel=new Map();
