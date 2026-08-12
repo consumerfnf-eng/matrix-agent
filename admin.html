@@ -53,7 +53,7 @@ progress{width:100%;height:8px}
 </head>
 <body>
 <header>
-  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-141</span></h1>
+  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-143</span></h1>
   <div id="scopeBar" class="hide" style="display:flex;gap:6px;align-items:center;margin-left:16px">
     <select id="selBrand" style="padding:4px 6px;font-size:12px"></select>
     <span style="opacity:.4">›</span>
@@ -2033,7 +2033,7 @@ function renderMatrix(){
       <div style="margin-bottom:8px">${ts.sigs.map(([s,n])=>`<span class="chip warn">${esc(s)} ${n}</span>`).join('')}</div>`:''}
     ${ts.kws.length?`<div class="small" style="color:var(--sub);font-weight:700;margin-bottom:4px">키워드</div>
       <div style="margin-bottom:8px">${ts.kws.map(([w,n])=>`<span class="chip">${esc(w)}${n>1?' ×'+n:''}</span>`).join('')}</div>`:''}
-    ${ts.imgs.length?`<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px">${ts.imgs.map(t=>
+    ${ts.imgs.length?`<div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px">${ts.imgs.map(t=>
       `<a href="${esc(t.url||'#')}" target="_blank" title="${esc(t.title||'')}"><img src="${esc(t.img)}" loading="lazy" style="width:100%;height:110px;object-fit:cover;border-radius:7px" onerror="this.style.display='none'"></a>`).join('')}</div>`:''}
   </div>`:'';
   $('#matrixWrap').innerHTML=tsHtml+h;
@@ -2109,8 +2109,8 @@ function drawCellDetail(key){
             </select>`:''}
           </span>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px">${thumbs}</div>
-        ${more>0?`<div id="more_${gid}" style="display:none;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:8px">${restThumbs}</div>
+        <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px">${thumbs}</div>
+        ${more>0?`<div id="more_${gid}" style="display:none;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-top:8px">${restThumbs}</div>
           <div style="margin-top:6px"><button class="ghost" style="padding:3px 10px;font-size:11px" onclick="var m=document.getElementById('more_${gid}');m.style.display='grid';this.remove()">더보기 (+${more}모델) — 드래그하려면 펼치기</button></div>`:''}
         <div style="margin-top:8px;border-top:1px dashed var(--line);padding-top:8px">
           <div class="row" style="gap:6px;align-items:center;flex-wrap:wrap">
@@ -2133,7 +2133,7 @@ function drawCellDetail(key){
       ${trendKw.length?`<br><span class="small" style="color:var(--sub)">트렌드 키워드: </span>`+trendKw.map(([w,n])=>`<span class="chip">${esc(w)}${n>1?' ×'+n:''}</span>`).join(''):''}
     </div>`:''}
     ${trThumbs?`<div class="small" style="font-weight:700;margin:4px 0 5px;color:#b26a00">📈 트렌드 기사 이미지 ${cell.trendImgs.length}</div>
-      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:12px">${trThumbs}</div>`
+      <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:12px">${trThumbs}</div>`
       :(cell.mentions?'':`<div class="small" style="color:var(--sub);margin-bottom:10px">이 칸에 매칭된 트렌드 기사가 없습니다 — 전체 기사·키워드는 매트릭스 위 “📈 트렌드 요약”에서 볼 수 있고, 01에서 트렌드 자료 소스가 켜져(active) 있는지 확인하세요.</div>`)}
     <div class="small" style="font-weight:700;margin:10px 0 6px">서브카테고리별 레퍼런스 그룹 <span style="color:var(--sub);font-weight:400">· ${groupList.length}개 그룹 · 총 ${refs.length}모델 (믹스 없음 · 사진을 다른 그룹 위로 끌어 넣으면 서브카테고리 이동)</span></div>
     ${groupsHtml||'<span class="small">사진 없음</span>'}
@@ -2410,6 +2410,30 @@ function renderShoeModels(){ const box=document.getElementById('shoeModelBox'); 
   </div>`).join('')+`<label style="width:56px;height:72px;border:1px dashed var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--sub);cursor:pointer" title="모델 사진 추가">+<input type="file" accept="image/*" multiple style="display:none" onchange="addShoeModels(this.files)"></label>`;
 }
 
+// 피팅컷 코디·포즈 다양화 풀 — 피팅컷 생성마다 랜덤 교체(얼굴/모델 설정은 그대로)
+const FIT_POSES=[
+  'Full-body shot from head to toe, walking naturally toward the camera with a relaxed stride.',
+  'Full-body shot from head to toe, standing tall and elegant, weight on one leg, one hand resting in a pocket.',
+  'Full-body shot from head to toe, three-quarter turn glancing over the shoulder.',
+  'Full-body shot from head to toe, standing straight facing the camera, hands softly at the sides.',
+  'Full-body shot from head to toe, mid-stride with one leg crossing in front, effortless motion.',
+  'Full-body shot from head to toe, leaning lightly against a plain wall, calm composed posture.'];
+const FIT_COORDS_LUX=[
+  'Styled with a mid-length pencil skirt and sleek knee-high boots — minimal quiet-luxury coordination.',
+  'Styled with tailored wide-leg trousers and pointed pumps.',
+  'Styled with straight-leg trousers and minimalist leather loafers.',
+  'Styled with a midi A-line skirt and elegant heeled sandals.',
+  'Styled with slim cigarette trousers and refined ankle boots.',
+  'Styled with a long pleated maxi skirt and flat mules.',
+  'Styled with cropped tailored trousers and kitten heels.'];
+const FIT_COORDS_STREET=[
+  'Styled with relaxed wide denim and chunky sneakers — youthful street coordination.',
+  'Styled with a pleated mini skirt and retro sneakers.',
+  'Styled with cargo trousers and high-top sneakers.',
+  'Styled with a mid-length skirt and clean court sneakers.',
+  'Styled with straight jeans and low-profile sneakers.',
+  'Styled with track pants and sporty runners.'];
+const pick=a=>a[Math.floor(Math.random()*a.length)];
 window.genNewCard=async(key,subEnc,gid,mode)=>{
   mode=mode||'cad';
   const sub=decodeURIComponent(subEnc);
@@ -2525,7 +2549,8 @@ window.genNewCard=async(key,subEnc,gid,mode)=>{
   // 리얼 제품컷(모델 없이) — 조합 디자인
   let realPrompt=`Photorealistic studio product photograph of the garment on an invisible ghost-mannequin (NO person), front view. ${combo}${attrHint} ${brandLogoLine} True-to-life fabric texture (down loft, quilting depth, sheen). ${studio}`;
   // 피팅컷 프롬프트 — "첨부한 (생성된 제품) 이미지의 옷을 그대로" 모델에 입힘
-  let fitPrompt=`${modelHead} ${mood} ${pose} She is wearing EXACTLY the garment shown in the attached image, reproduced faithfully (same silhouette, length, color, surface, trims and details) — do not add or remove features, and keep the same hem length.${lengthLine} ${styling} ${brandLogoLine} ${studio}`;
+  let fitPrompt=`${modelHead} ${mood} {{POSE}} She is wearing EXACTLY the garment shown in the attached image, reproduced faithfully (same silhouette, length, color, surface, trims and details) — do not add or remove features, and keep the same hem length.${lengthLine} {{COORD}} ${brandLogoLine} ${studio}`;
+  const fitCoords=isMLB?FIT_COORDS_STREET:FIT_COORDS_LUX;
   // ===== 👟 SHOES 전용 분기: 실사 페어 슈즈(레퍼 요소 조합·복제 아님) + 모델 피팅컷 =====
   let fitInputsExtra=[], shoeMeta='';
   if(isShoes()){
@@ -2633,7 +2658,7 @@ window.genNewCard=async(key,subEnc,gid,mode)=>{
     // 제품샷 생성(조합 디자인). 생성된 이미지를 저장 → 피팅은 이 이미지를 입힘
     const urlReal=await realImage(inputs,realPrompt);
     const ci1=GEN_STATE[gid].cands.length;
-    const cand1={url:urlReal,genImg:urlReal,meta:(isShoes()?shoeMeta:`제품샷 · ${mainColor}${picks.length?' · '+picks.length+'포인트':''}${isMLB?'':' · SEMI-SHINE '+glossPct+'%'}`),kind:'real',fitPrompt,fitInputs:fitInputsExtra,confirmed:false,pub:null,cardId};
+    const cand1={url:urlReal,genImg:urlReal,meta:(isShoes()?shoeMeta:`제품샷 · ${mainColor}${picks.length?' · '+picks.length+'포인트':''}${isMLB?'':' · SEMI-SHINE '+glossPct+'%'}`),kind:'real',fitPrompt,fitInputs:fitInputsExtra,fitCoords,confirmed:false,pub:null,cardId};
     GEN_STATE[gid].cands.push(cand1); ph.innerHTML=candCardHTML(cand1,key,subEnc,gid,ci1);
     if(msg)msg.textContent='제품샷 생성 완료 — 원하는 컷에서 "👤 피팅컷 생성"을 누르세요. 다른 조합은 다시 눌러 생성.';
   }catch(e){ ph.innerHTML=`<div class="small" style="color:var(--err)">생성 실패: ${esc(String(e.message).slice(0,120))}</div>`; if(msg)msg.textContent='생성 실패 — 엔진/키 확인'; }
@@ -2652,7 +2677,11 @@ window.genFitting=async(gid,ci,key,subEnc)=>{
   try{
     const genImg=src.genImg||src.url;                 // 생성된 제품샷(IMAGE1) → 모델에 착장. 슈즈는 모델룩(IMAGE2)도 함께
     const inputs=[genImg,...(src.fitInputs||[])].filter(Boolean);
-    const url=await realImage(inputs,src.fitPrompt);
+    let fp=src.fitPrompt;
+    if(fp&&fp.indexOf('{{POSE}}')>=0){   // 옷 피팅컷: 생성마다 포즈·코디 랜덤(얼굴/모델은 그대로)
+      fp=fp.replace('{{POSE}}',pick(FIT_POSES)).replace('{{COORD}}',pick(src.fitCoords||FIT_COORDS_LUX));
+    }
+    const url=await realImage(inputs,fp);
     const nci=st.cands.length;
     const cand={url,meta:`피팅컷(모델) · ${String(src.meta||'').replace(/^제품샷 · /,'')}`,kind:'fit',confirmed:false,pub:null,cardId};
     st.cands.push(cand); ph.innerHTML=candCardHTML(cand,key,subEnc,gid,nci);
