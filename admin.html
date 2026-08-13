@@ -53,7 +53,7 @@ progress{width:100%;height:8px}
 </head>
 <body>
 <header>
-  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-148</span></h1>
+  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-151</span></h1>
   <div id="scopeBar" class="hide" style="display:flex;gap:6px;align-items:center;margin-left:16px">
     <select id="selBrand" style="padding:4px 6px;font-size:12px"></select>
     <span style="opacity:.4">›</span>
@@ -1493,27 +1493,35 @@ function outerSub(a){
 
   /* ---- 보조 판정 ---- */
   const hood   = /HOOD/.test(collar) || (hoodF && hoodF!=='NONE') || /HOOD/.test(form);
-  const furCol = /FUR_COLLAR/.test(collar) || /FUR_TRIM/.test(hoodF) || /SHEARLING_AVIATOR|SUEDE_FURTRIM/.test(form);
-  const fullFur= /FULL_FUR|SHEARLING|SHERPA|FLEECE/.test(surf) || /FULL_FUR/.test(form);
+  const furTrimOnly = /FUR_COLLAR/.test(collar) || /FUR_TRIM/.test(hoodF)
+    || /COLLAR|TRIM|AVIATOR|FURTRIM/.test(form)
+    || /SHEARLING[_ ]?COLLAR|FUR[_ ]?COLLAR|COLLAR/.test(U(a.look_subtype));
+  // 몸판 대부분이 퍼·셰르파일 때만 FULL FUR (칼라·트림만이면 제외)
+  const furBody = /FULL_FUR/.test(form) || /FULL_FUR/.test(surf)
+    || ((/SHEARLING|SHERPA|FLEECE/.test(surf)) && !furTrimOnly && !/TECHNICAL|MATTE|GLOSS|NYLON/.test(surf));
+  const fullFur= furBody;
+  const furCol = /FUR_COLLAR/.test(collar) || /FUR_TRIM/.test(hoodF) || /SHEARLING_AVIATOR|SUEDE_FURTRIM/.test(form) || (!furBody && /SHEARLING|FUR/.test(surf+' '+U(a.look_subtype)));
   const shirtC = /SHIRT/.test(collar) || /SHACKET|OVERSHIRT|SHIRT/.test(form);
   const rib    = /RIB/.test(hem) || /RIB/.test(collar) || /RIB/.test(form) || /BOMBER/.test(form);
   const belted = waist==='BELT' || /BELT|WAISTED|DRAWCORD_WAIST|CINCH/.test(form);
-  const vest   = sleeves==='NONE' || /\bVEST\b|GILET/.test(form);
+  const vestTxt = form+' '+U(a.look_subtype)+' '+U(a.base_item_family);
+  const vest   = sleeves==='NONE' || /VEST|GILET|SLEEVELESS/.test(vestTxt);
   const cape   = sleeves==='CAPE' || /CAPE|PONCHO/.test(form);
   const hybrid = /KNIT|JERSEY|WOOL|TWEED|BOUCLE|CORDUROY|LEATHER|SUEDE/.test(surf) && /TECHNICAL|MATTE|GLOSS|NYLON/.test(surf);
-  const light  = (w==='ULTRALIGHT'||w==='LIGHT');
-  const heavy  = (w==='HIGH'||w==='EXTREME');
+  const wtxt=form+' '+U(a.look_subtype)+' '+U(a.weight_hint);
+  const light  = (w==='ULTRALIGHT'||w==='LIGHT') || (!w||w==='UNKNOWN'||w==='MID') && /LIGHT(WEIGHT)?|ULTRALIGHT|PACKABLE|FEATHER|SUPERLIGHT/.test(wtxt);
+  const heavy  = (w==='HIGH'||w==='EXTREME') || /EXPEDITION|HEAVY|EXTREME|ARCTIC|PARKA_LONG/.test(wtxt);
   const cardi  = /CARDIGAN/.test(form) || (/KNIT/.test(surf) && !hood && collar==='NONE');
 
   /* ---- 메인 그룹 (지정 우선순위) ---- */
   let g;
-  if(light && !vest && !cape && !fullFur && !shirtC && !rib) g='LIGHTWEIGHT DOWN';
+  if(vest)          g='VEST';
+  else if(light && !cape && !fullFur && !shirtC && !rib) g='LIGHTWEIGHT DOWN';
   else if(shirtC)   g='SHIRT JACKET';
   else if(rib)      g='BOMBER / BLOUSON';
   else if(cardi)    g='CARDIGAN DOWN';
   else if(hybrid)   g='HYBRID DOWN';
   else if(belted)   g='WAISTED / BELTED PUFFER';
-  else if(vest)     g='VEST';
   else if(fullFur)  g='FUR / SHERPA DOWN';
   else if(cape)     g='CAPE / PONCHO';
   else if(/PUFFER|PADDED|QUILT|DOWN|PACKABLE|CLASSIC/.test(form)||a.fill_type) g='BASIC PUFFER';
@@ -1522,7 +1530,16 @@ function outerSub(a){
   /* ---- SURFACE 태그 ---- */
   let qTag;
   if(quilt==='QUILTED'||quilt==='NON_QUILTED') qTag=(quilt==='QUILTED')?'QUILTED':'NON-QUILTED';
-  else qTag = /QUILT|BAFFLE|PUFFER|PADDED/.test(form) ? 'QUILTED' : 'NON-QUILTED';
+  else{
+    const qtxt=form+' '+U(a.look_subtype)+' '+U(a.details);
+    const saysQuilt = /QUILT/.test(qtxt);                       // 명시적 퀼팅 언급
+    const saysSmooth= /NON[_ ]?QUILT|SMOOTH|SEAMLESS|BONDED|WELDED|CLEAN[_ ]?FACE|HIDDEN[_ ]?BAFFLE|PADDING\b/.test(qtxt);
+    const softSurf  = /WOOL|TWEED|BOUCLE|KNIT|LEATHER|SUEDE|SHEARLING|FUR|CORDUROY/.test(surf);
+    if(saysQuilt)        qTag='QUILTED';                        // 이름에 quilted면 무조건 퀼팅
+    else if(saysSmooth||softSurf) qTag='NON-QUILTED';           // padding/매끈/이종소재 표면
+    else if(/BAFFLE|PUFFER|DOWN|CLASSIC|PACKABLE|SKI/.test(qtxt)||a.fill_type==='DOWN'||a.fill_type==='SYNTHETIC') qTag='QUILTED';
+    else qTag='NON-QUILTED';
+  }
 
   /* ---- COLLAR 태그 ---- */
   let cTag;
