@@ -53,7 +53,7 @@ progress{width:100%;height:8px}
 </head>
 <body>
 <header>
-  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-154</span></h1>
+  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-157</span></h1>
   <div id="scopeBar" class="hide" style="display:flex;gap:6px;align-items:center;margin-left:16px">
     <select id="selBrand" style="padding:4px 6px;font-size:12px"></select>
     <span style="opacity:.4">›</span>
@@ -2454,6 +2454,7 @@ function cadArtPhrase(){ return '흰 배경·검은 라인의 깔끔한 플랫 �
 function brandLogoRule(){
   if(CUR_BRAND==='MLB') return LOGO_RULE;
   const b=CUR_BRAND;
+  if(b==='DUVETICA') return 'DUVETICA 시그니처 러버 패치를 반드시 넣으세요 — 왼쪽 가슴 위쪽에 방패(육각·아래가 뾰족한) 형태의 작은 러버 배지, 검정 바탕에 가는 흰 테두리, 그 안에 흰색 대문자 산세리프로 DUVETICA 워드마크. 딱 한 번, 가슴 높이에, 과하지 않은 크기로 정확한 비율로 배치하세요(어두운 원단에는 톤온톤 블랙 온 블랙도 가능). 입력 레퍼런스나 CAD에 다른 브랜드의 로고·워드마크·모노그램·시그니처 패턴(예: LV·Dior·Prada·Miu Miu·Gucci·Moncler 등)이 보이면 전부 지우고 DUVETICA 패치만 남기세요. 타 브랜드 로고·시그니처는 절대 넣지 마세요. ';
   return `${b} 브랜드 아이덴티티에 맞게 로고/라벨은 톤온톤으로 은은하게(제품에 원래 있는 위치·형태로만) 처리하세요. 입력 레퍼런스나 CAD에 다른 브랜드의 로고·워드마크·모노그램·시그니처 패턴이 보이면 전부 지우세요. ${b} 외 타 브랜드 로고·시그니처는 절대 넣지 마세요. `;
 }
 const LOGO_RULE='MLB의 기존 로고를 반드시 반영하세요 — MLB NY 마크 또는 MLB 마크. 입력한 레퍼런스나 CAD에 다른 브랜드의 로고·워드마크·모노그램·시그니처 패턴(예: LV·Dior·Prada·Miu Miu 등)이 보이면 전부 지우고 MLB 로고만 남기세요. 타 브랜드 로고·시그니처는 결과물에 절대 넣지 마세요. ';
@@ -2551,6 +2552,12 @@ const FIT_COORDS_STREET=[
   'Styled with a mid-length skirt and clean court sneakers.',
   'Styled with straight jeans and low-profile sneakers.',
   'Styled with track pants and sporty runners.'];
+/* ===== DUVETICA 고정 룩(레퍼런스 기준) — 옷만 바뀌고 얼굴·코디·톤은 고정 ===== */
+const DV_FACE='A Korean woman in her mid-20s, clean luminous bare-looking skin, long straight dark-brown hair with soft natural movement, delicate refined features, calm composed expression with a soft neutral gaze, minimal nude-tone makeup with a soft rosy lip, no heavy contouring.';
+const DV_COORD='Styled minimally in neutral tones so the outerwear is the hero: a plain ivory or white fine-knit top with straight wide-leg cream trousers, or a simple black mini skirt with black knee-high boots. Keep the inner layers plain and unbranded, no patterns, no accessories, no bag, no jewellery beyond a tiny stud.';
+const DV_POSE='Full-body shot from head to toe, standing relaxed against a plain wall, weight on one leg, one hand loosely in a pocket, body angled slightly off-centre with a quiet editorial stillness.';
+const DV_STUDIO='Shot in a quiet premium studio: seamless backdrop in warm dark walnut wood, neutral warm grey, or soft ivory drape. Even soft directional lighting, gentle shadows, muted desaturated colour grading, editorial lookbook mood.';
+
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 window.genNewCard=async(key,subEnc,gid,mode)=>{
   mode=mode||'cad';
@@ -2571,7 +2578,7 @@ window.genNewCard=async(key,subEnc,gid,mode)=>{
   // ===== 실사 프롬프트(브랜드별) : 리얼 제품컷 + 피팅컷 =====
   const brand=CUR_BRAND||'';
   const isMLB=brand==='MLB';
-  const modelHead=($('#inModelSpec')&&$('#inModelSpec').value.trim())||'A Korean woman with sharp idol-like facial features, glass skin, long dark hair.';
+  const modelHead=($('#inModelSpec')&&$('#inModelSpec').value.trim())||(brand==='MLB'?'A Korean woman with sharp idol-like facial features, glass skin, long dark hair.':DV_FACE);
   const mood=isMLB
     ?'confident charismatic expression, strong magnetic presence, bold and captivating energy, powerful attitude.'
     :'graceful composed expression, refined poised posture, luxurious sophisticated aura, timeless beauty.';
@@ -2582,7 +2589,7 @@ window.genNewCard=async(key,subEnc,gid,mode)=>{
     :'Premium quiet-luxury styling, minimal and refined coordination, timeless elegant pieces, understated tailoring, sophisticated grown-up mood — do NOT over-style or make it look too young or too busy.';
   const brandLogoLine=isMLB
     ?'The outfit prominently features an MLB NY logo embroidered or printed on the clothing.'
-    :'The garment carries a small DUVETICA logo (no other brand logos).';
+    :'BRAND MARK (required): the garment carries the DUVETICA signature rubber patch on the upper-left chest — a small shield//hexagon-shaped badge with a flat bottom point, black ground with a thin white outline and the word DUVETICA in white uppercase sans-serif across it (tone-on-tone black-on-black is fine on dark bodies). Place it once, chest height, subtle and correctly proportioned — never oversized, never repeated, and no other brand logos, monograms or signature patterns anywhere.';
   // ===== 레퍼에서 디자인 포인트 키워드 추출 → 메인바디 + 몇 개만 조합(복제 아님) =====
   const gmodels=[...new Set(g.refs.map(r=>r.model).filter(Boolean))].slice(0,40);
   let axList=[];
@@ -2673,17 +2680,23 @@ window.genNewCard=async(key,subEnc,gid,mode)=>{
   else if(/·\s*STAND(?!ARD)\b/.test(subU)) collarLine=' COLLAR: a STAND-UP funnel collar, no hood.';
   else if(/·\s*COLLARED/.test(subU)) collarLine=' COLLAR: a flat shirt/tailored collar, no hood.';
   if(tagFurCollar&&!tagFullFur) collarLine+=' The collar (or hood trim) is FUR / SHEARLING while the body stays nylon.';
+  // 중량 태그 → 볼륨·로프트 지시
+  let fillLine='';
+  if(/·\s*HEAVY/.test(subU)) fillLine=' FILL: high-loft heavyweight down — deep, plump chambers with generous volume and visible thickness.';
+  else if(/·\s*LIGHTWEIGHT/.test(subU)) fillLine=' FILL: ultralight fill — slim, low-profile loft with minimal bulk, close to the body.';
+  else if(/·\s*STANDARD/.test(subU)) fillLine=' FILL: standard mid-weight loft — balanced volume, neither ultralight nor expedition-heavy.';
   const banLine=` Design-mix cutting, non-quilted panels and material/quilt mixing are ALLOWED as creative design moves. The ONE hard rule: never place a belt or strap high on the chest — any belt or waist shirring must sit at the natural waist.${isMidOrLonger?'':(dvLuxActive?' This is a short active length — a waist drawcord shirring at the natural waist is allowed, but do NOT add any belt.':' This is a short/cropped length, so do NOT add any belt or waist shirring at all.')}`;
-  const combo=`Design a NEW, original ${isMLB?'MLB':'DUVETICA'} "${sub}" for next season. Base the overall silhouette, proportions and construction on the attached reference garment.${basisG}${lengthLine}${dnaLine} Main body colour: ${mainColor}.${colorLock} ${surfaceLine}${quiltLine}${smoothLine}${collarLine} `
+  const combo=`Design a NEW, original ${isMLB?'MLB':'DUVETICA'} "${sub}" for next season. Base the overall silhouette, proportions and construction on the attached reference garment.${basisG}${lengthLine}${dnaLine} Main body colour: ${mainColor}.${colorLock} ${surfaceLine}${quiltLine}${smoothLine}${collarLine}${fillLine} `
     +(picks.length?`Incorporate ONLY these selected design points and nothing else: ${picks.join('; ')}. `:'Keep it clean and minimal with no extra trims. ')
-    +`By default the garment has NO exterior pockets${hasDblPkt&&picks.some(p=>/pocket/i.test(p))?' (except the two front patch pockets selected above)':''} — keep the body surface clean.${banLine} `
+    +`By default the garment has NO exterior pockets${hasDblPkt&&picks.some(p=>/pocket/i.test(p))?' (except the two front patch pockets selected above)':''} — keep the body surface clean (the DUVETICA chest patch described above is REQUIRED and is not affected by this rule).${banLine} `
     +`Combine the elements into one cohesive, wearable design. Clean and intact, no holes/rips/distressing.`;
   const attrHint=(kws.length?` Trend cues for color/material only: ${kws.join(', ')}.`:'');
   const studio='bright white studio background, clean soft lighting, minimalist backdrop, professional fashion shoot. Photorealistic, editorial fashion photography, high quality. No text, no watermarks. Centered composition, subject fills ~85% of the vertical frame, identical scale and framing every time.';
   // 리얼 제품컷(모델 없이) — 조합 디자인
-  let realPrompt=`Photorealistic studio product photograph of the garment on an invisible ghost-mannequin (NO person), front view. ${combo}${attrHint} ${brandLogoLine} True-to-life fabric texture (down loft, quilting depth, sheen). ${studio}`;
+  let realPrompt=`Photorealistic studio product photograph of the garment on an invisible ghost-mannequin (NO person), front view. ${brandLogoLine} ${combo}${attrHint} True-to-life fabric texture (down loft, quilting depth, sheen).${isMLB?'':' Double-check before finishing: the DUVETICA shield patch must be visible on the upper-left chest.'} ${studio}`;
   // 피팅컷 프롬프트 — "첨부한 (생성된 제품) 이미지의 옷을 그대로" 모델에 입힘
-  let fitPrompt=`${modelHead} ${mood} {{POSE}} She is wearing EXACTLY the garment shown in the attached image, reproduced faithfully (same silhouette, length, color, surface, trims and details) — do not add or remove features, and keep the same hem length.${lengthLine} {{COORD}} ${brandLogoLine} ${studio}`;
+  const fitStudio=isMLB?studio:(DV_STUDIO+' Photorealistic, editorial fashion photography, high quality. No text, no watermarks. Centered composition, subject fills ~85% of the vertical frame, identical scale and framing every time.');
+  let fitPrompt=`${modelHead} ${mood} {{POSE}} She is wearing EXACTLY the garment shown in the attached image, reproduced faithfully (same silhouette, length, color, surface, trims and details) — do not add or remove features, and keep the same hem length.${lengthLine} {{COORD}} ${brandLogoLine}${isMLB?'':' Keep the DUVETICA chest patch visible and legible.'} ${fitStudio}`;
   const fitCoords=isMLB?FIT_COORDS_STREET:FIT_COORDS_LUX;
   // ===== 👟 SHOES 전용 분기: 실사 페어 슈즈(레퍼 요소 조합·복제 아님) + 모델 피팅컷 =====
   let fitInputsExtra=[], shoeMeta='';
@@ -2813,7 +2826,8 @@ window.genFitting=async(gid,ci,key,subEnc)=>{
     const inputs=[genImg,...(src.fitInputs||[])].filter(Boolean);
     let fp=src.fitPrompt;
     if(fp&&fp.indexOf('{{POSE}}')>=0){   // 옷 피팅컷: 생성마다 포즈·코디 랜덤(얼굴/모델은 그대로)
-      fp=fp.replace('{{POSE}}',pick(FIT_POSES)).replace('{{COORD}}',pick(src.fitCoords||FIT_COORDS_LUX));
+      const _isDV=(CUR_BRAND!=='MLB');
+      fp=fp.replace('{{POSE}}',_isDV?DV_POSE:pick(FIT_POSES)).replace('{{COORD}}',_isDV?DV_COORD:pick(src.fitCoords||FIT_COORDS_STREET));
     }
     const url=await realImage(inputs,fp);
     const nci=st.cands.length;
