@@ -53,7 +53,7 @@ progress{width:100%;height:8px}
 </head>
 <body>
 <header>
-  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-151</span></h1>
+  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-154</span></h1>
   <div id="scopeBar" class="hide" style="display:flex;gap:6px;align-items:center;margin-left:16px">
     <select id="selBrand" style="padding:4px 6px;font-size:12px"></select>
     <span style="opacity:.4">›</span>
@@ -686,9 +686,10 @@ function curNormLine(v){ if(isShoes())return v||null; const s=String(v||'').trim
     if(/다운|패딩|충전|DOWN|PADD|PUFF|QUILT|인슐|베스트|VEST|파카|PARKA/.test(s))return'INSULATION';
     return null;
   }
-  if(/CROP|크롭|SHORT|숏|봄버|bomber|하프|half|블루종|blouson/.test(s))return'SHORT';
-  if(/HIP|힙|MID|미드|미들|허리|waist/.test(s))return'MID';
-  if(/LONG|롱|MAXI|맥시|풀렝스|full|코트|coat|parka|파카/.test(s))return'LONG';
+  // 기장만으로 판정(형태 단어는 기장이 아니므로 제외). HIP=엉덩이선까지=SHORT, MID=허벅지 중간
+  if(/CROP|크롭|SHORT|숏|HIP|힙|하프|half/.test(s))return'SHORT';
+  if(/MID|미드|미들|THIGH|허벅지|KNEE_ABOVE/.test(s))return'MID';
+  if(/LONG|롱|MAXI|맥시|풀렝스|full|CALF|종아리/.test(s))return'LONG';
   return null;
 }
 // 기획 시즌 반기에 따라 오프시즌 라인 숨김: FW→SUMMER 숨김, SS→WINTER 숨김
@@ -1375,6 +1376,15 @@ KEY RULES:
  Glossy hooded puffer, classic baffles, packable/light layer, vest, technical parka, ski garment ⇒ LUX_ACTIVE (NOT holiday).
  Stand collar, zipper, short length are NEUTRAL (score 0). Color alone = 0. Gold hardware alone = +1 URBAN only.
 STRUCTURE FIELDS (report independently of lifestyle):
+LENGTH (measure the hem against the body, ignore the garment's name):
+ CROPPED = above the waist. SHORT = hem at the hip line (high hip to just below the seat).
+ HIP = hem right at/just below the seat — still the hip band, NOT thigh.
+ MID = hem at the MIDDLE OF THE THIGH — clearly below the seat and clearly above the knee.
+ LONG = hem at the knee or below. MAXI = mid-calf or longer.
+ A garment called blouson/bomber/parka/coat is NOT automatically short or long — judge only by where the hem falls.
+ GATHERED HEMS: when the hem is drawn in by a drawcord, elastic, rib band or toggle, the garment LOOKS shorter than it is. Judge the length by the actual side-seam length of the panel (the lowest point of the hem and how far the back drops), NOT by the puckered front. If the side seam or back hem clearly passes the seat onto the thigh, it is MID even when the front looks cropped.
+ FLAT-LAY / HANGER SHOTS: with no body for scale, use internal proportions — compare hem-to-shoulder against sleeve length. If the body length is close to or longer than the sleeve length, it is MID or longer; a body clearly shorter than the sleeve is SHORT/CROPPED.
+ When torn between two adjacent bands, choose the LONGER one and set review_needed=true.
  hem=RIB only when a knit ribbed band is visible at the hem or cuffs. Drawcord/elastic gathering is NOT rib.
  sleeves=NONE for vests/gilets. sleeves=CAPE when the body and arms form one open cape/poncho panel with no set-in sleeve seam.
  CAPE/PONCHO: wide A-line one-piece silhouette, arms covered by the body panel, open or slit sides, no sleeve construction ⇒ base_item_form=CAPE or PONCHO and sleeves=CAPE.
@@ -1503,7 +1513,10 @@ function outerSub(a){
   const furCol = /FUR_COLLAR/.test(collar) || /FUR_TRIM/.test(hoodF) || /SHEARLING_AVIATOR|SUEDE_FURTRIM/.test(form) || (!furBody && /SHEARLING|FUR/.test(surf+' '+U(a.look_subtype)));
   const shirtC = /SHIRT/.test(collar) || /SHACKET|OVERSHIRT|SHIRT/.test(form);
   const rib    = /RIB/.test(hem) || /RIB/.test(collar) || /RIB/.test(form) || /BOMBER/.test(form);
-  const belted = waist==='BELT' || /BELT|WAISTED|DRAWCORD_WAIST|CINCH/.test(form);
+  const beltTxt = form+' '+U(a.look_subtype)+' '+U(a.details)+' '+waist;
+  // 허리가 명확히 강조된 것(벨트·스트링·절개·시밀)은 모두 한 그룹
+  const belted = waist==='BELT'
+    || /BELT|BELTED|WAISTED|WAIST[_ ]?SEAM|WAIST[_ ]?TIE|DRAWCORD[_ ]?WAIST|CINCH|CINCHED|TIE[_ ]?WAIST|NIPPED|HOURGLASS|SHIRRED[_ ]?WAIST/.test(beltTxt);
   const vestTxt = form+' '+U(a.look_subtype)+' '+U(a.base_item_family);
   const vest   = sleeves==='NONE' || /VEST|GILET|SLEEVELESS/.test(vestTxt);
   const cape   = sleeves==='CAPE' || /CAPE|PONCHO/.test(form);
@@ -1516,12 +1529,12 @@ function outerSub(a){
   /* ---- 메인 그룹 (지정 우선순위) ---- */
   let g;
   if(vest)          g='VEST';
+  else if(belted)   g='WAISTED / BELTED PUFFER';   // 허리 강조는 형태보다 우선해 한 그룹으로
   else if(light && !cape && !fullFur && !shirtC && !rib) g='LIGHTWEIGHT DOWN';
   else if(shirtC)   g='SHIRT JACKET';
   else if(rib)      g='BOMBER / BLOUSON';
   else if(cardi)    g='CARDIGAN DOWN';
   else if(hybrid)   g='HYBRID DOWN';
-  else if(belted)   g='WAISTED / BELTED PUFFER';
   else if(fullFur)  g='FUR / SHERPA DOWN';
   else if(cape)     g='CAPE / PONCHO';
   else if(/PUFFER|PADDED|QUILT|DOWN|PACKABLE|CLASSIC/.test(form)||a.fill_type) g='BASIC PUFFER';
@@ -2597,8 +2610,13 @@ window.genNewCard=async(key,subEnc,gid,mode)=>{
   else mainColor=['IVORY','BROWN','BLACK','CAMEL'][idx%4];
   const glossPct=20+Math.floor(Math.random()*61);   // SEMI-SHINE 20~80%
   // 퀼팅: 레퍼 기반 + 패턴 다양화(다이아몬드/가로 채널/물결/박스), 간격은 레퍼를 따름(촘촘하면 촘촘, 넓으면 넓게)
-  const isQuilted=/QUILT|PUFFER|PADD|DOWN|채널|다이아/i.test(sub+' '+surfTxt);
+  // 서브카테고리 태그(· QUILTED / · NON-QUILTED)를 최우선으로 따른다
+  const subU=String(sub||'').toUpperCase();
+  const tagNonQuilt=/NON-?QUILTED/.test(subU);
+  const tagQuilt=/(^|·|\s)QUILTED/.test(subU)&&!tagNonQuilt;
+  const isQuilted=tagNonQuilt?false:(tagQuilt?true:/QUILT|PUFFER|PADD|DOWN|채널|다이아/i.test(sub+' '+surfTxt));
   const quiltPatterns=['diamond quilting','horizontal channel quilting','wavy onde-style quilting','box quilting'];
+  const smoothLine=tagNonQuilt?' SURFACE CONSTRUCTION: NON-QUILTED — the outer face must be completely smooth with NO visible stitch lines, channels or baffles anywhere (chambers hidden inside). Do not add any quilting pattern.':'';
   const quiltLine=isQuilted?` Quilting: base it on the attached reference, and this time render it as ${quiltPatterns[idx%quiltPatterns.length]}. Match the stitch spacing/scale of the reference — if the reference quilting is small and tight keep it small and tight, if it is wide keep the panels wide.`:'';
   // 기장 판정: 미드 기장 이상에서만 벨트·웨이스트 셔링 고려(숏/크롭은 제외)
   const lenTxt=(axList.map(a=>String(a.length||'')).join(' ')+' '+sub).toUpperCase();
@@ -2608,7 +2626,7 @@ window.genNewCard=async(key,subEnc,gid,mode)=>{
   const cellLine=(key.split('|')[0]||'').toUpperCase();
   const cellDna=(key.split('|')[1]||'').toUpperCase();
   const isLenLine=/^(SHORT|MID|LONG)$/.test(cellLine);
-  const lenMap={SHORT:'a SHORT / cropped length (hem anywhere from the high hip to the top of the thigh)',MID:'a MID length (hem anywhere from the upper thigh to just above the knee)',LONG:'a LONG length (hem at the knee or below, down to mid-calf)'};
+  const lenMap={SHORT:'a SHORT length (hem at the hip line — anywhere from the high hip to just below the seat; it must NOT reach the thigh)',MID:'a MID length (hem at the MIDDLE OF THE THIGH — clearly below the seat, clearly above the knee)',LONG:'a LONG length (hem at the knee or below, down to mid-calf or longer)'};
   const lengthLine=isLenLine?` LENGTH BAND: keep it within ${lenMap[cellLine]} — stay inside this band (do NOT jump to another length category), but WITHIN the band follow the proportions of THIS reference garment so different references naturally give different hems. Do not output an identical hem on every card.`:'';
   // 모드: 기본(cad)=브랜드에 더 충실하게 재해석 / 레퍼조합(ref)=레퍼에 더 가깝게
   const refFaithfulG=(mode==='ref');
@@ -2643,9 +2661,20 @@ window.genNewCard=async(key,subEnc,gid,mode)=>{
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
   const rand=pool.slice(0, pool.length?1+Math.floor(Math.random()*Math.min(3,pool.length)):0);
   const picks=[...new Set([...forcedPts,...rand])];
-  const surfaceLine=isMLB?'Matte or lightly technical nylon.':`DUVETICA SEMI-SHINE nylon (about ${glossPct}% gloss — subtle refined sheen, never fully matte or plastic high-gloss).`;
+  const tagFullFur=/FULL FUR/.test(subU)||/FUR \/ SHERPA/.test(subU);
+  const tagFurCollar=/FUR COLLAR|FUR HOOD|FUR TRIM/.test(subU);
+  const surfaceLine=isMLB?'Matte or lightly technical nylon.'
+    :(tagFullFur?`SURFACE: the ENTIRE outer body, sleeves and collar are covered in plush FUR / SHEARLING pile (long-hair fur or dense sherpa) — this is a full-fur garment, NOT a nylon puffer. No nylon shell, no quilting, no baffles anywhere on the body.`
+      :`DUVETICA SEMI-SHINE nylon (about ${glossPct}% gloss — subtle refined sheen, never fully matte or plastic high-gloss).`);
+  // 칼라 태그 반영 (HOODED / STAND / COLLARLESS / FUR COLLAR …)
+  let collarLine='';
+  if(/·\s*HOODED/.test(subU)) collarLine=' COLLAR: it has a HOOD.';
+  else if(/·\s*COLLARLESS/.test(subU)) collarLine=' COLLAR: collarless — a clean round/V neckline with NO collar and NO hood.';
+  else if(/·\s*STAND(?!ARD)\b/.test(subU)) collarLine=' COLLAR: a STAND-UP funnel collar, no hood.';
+  else if(/·\s*COLLARED/.test(subU)) collarLine=' COLLAR: a flat shirt/tailored collar, no hood.';
+  if(tagFurCollar&&!tagFullFur) collarLine+=' The collar (or hood trim) is FUR / SHEARLING while the body stays nylon.';
   const banLine=` Design-mix cutting, non-quilted panels and material/quilt mixing are ALLOWED as creative design moves. The ONE hard rule: never place a belt or strap high on the chest — any belt or waist shirring must sit at the natural waist.${isMidOrLonger?'':(dvLuxActive?' This is a short active length — a waist drawcord shirring at the natural waist is allowed, but do NOT add any belt.':' This is a short/cropped length, so do NOT add any belt or waist shirring at all.')}`;
-  const combo=`Design a NEW, original ${isMLB?'MLB':'DUVETICA'} "${sub}" for next season. Base the overall silhouette, proportions and construction on the attached reference garment.${basisG}${lengthLine}${dnaLine} Main body colour: ${mainColor}.${colorLock} ${surfaceLine}${quiltLine} `
+  const combo=`Design a NEW, original ${isMLB?'MLB':'DUVETICA'} "${sub}" for next season. Base the overall silhouette, proportions and construction on the attached reference garment.${basisG}${lengthLine}${dnaLine} Main body colour: ${mainColor}.${colorLock} ${surfaceLine}${quiltLine}${smoothLine}${collarLine} `
     +(picks.length?`Incorporate ONLY these selected design points and nothing else: ${picks.join('; ')}. `:'Keep it clean and minimal with no extra trims. ')
     +`By default the garment has NO exterior pockets${hasDblPkt&&picks.some(p=>/pocket/i.test(p))?' (except the two front patch pockets selected above)':''} — keep the body surface clean.${banLine} `
     +`Combine the elements into one cohesive, wearable design. Clean and intact, no holes/rips/distressing.`;
