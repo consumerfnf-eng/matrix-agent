@@ -484,9 +484,18 @@ window.showCell=(key,keep)=>{
     <div class="ttl"><h3 style="margin:0">${esc(line)} × ${esc(dna)}</h3><button class="btn" onclick="closeCell()">닫기 ✕</button></div>
     <div class="small" style="margin:4px 0 6px">모델 ${c.models} · SKU ${c.skus} · 브랜드 ${(c.brands||[]).length}${c.mentions?` · 트렌드 자료 ${c.mentions}`:''}</div>
     <div class="read" style="margin:0 0 10px">이 칸은 총 <b>${c.models}모델·${(c.brands||[]).length}브랜드</b>로, 지배 서브카테고리는 <b>${esc(topSub||'—')}</b>입니다.${sig?` 주요 구조 신호는 ${esc(sig)}이며,`:''} 참고 브랜드는 ${esc(brs||'—')} 등입니다.${trTop?` <b>이 칸과 연결된 상위 트렌드: ${esc(trTop)}.</b>`:''}${c.mentions?` 트렌드 자료 ${c.mentions}건이 이 방향과 연결됩니다.`:''}</div>`;
-  h+=gl.map(([sub,rs])=>`<div style="border:1px solid var(--line);border-radius:9px;padding:10px;margin-bottom:10px;background:#fcfbf8">
-    <div style="font-weight:700;margin-bottom:6px">${esc(sub)} <span class="small">· ${rs.length}모델</span></div>
-    <div class="grid6">${rs.slice(0,12).map(r=>{const im=imgFor(r);return `<div><img class="ph" src="${esc(im)}" loading="lazy" onerror="this.style.opacity=.2"><div class="small" style="max-height:14px;overflow:hidden">${esc(r.brand||'')}</div></div>`;}).join('')}</div></div>`).join('')||'<div class="small">레퍼런스 없음</div>';
+  // 그룹 박스 1개 렌더 (small=1~2모델용 압축 배치)
+  const gBox=(sub,rs,small)=>`<div style="border:1px solid var(--line);border-radius:9px;padding:10px;background:#fcfbf8${small?'':';margin-bottom:10px'}">
+    <div style="font-weight:700;margin-bottom:6px;font-size:${small?'13px':'inherit'}">${esc(sub)} <span class="small">· ${rs.length}모델</span></div>
+    <div style="display:grid;grid-template-columns:repeat(${small?2:6},minmax(0,1fr));gap:8px">${rs.slice(0,12).map(r=>{const im=imgFor(r);return `<div><img class="ph" src="${esc(im)}" loading="lazy" onerror="this.style.opacity=.2"><div class="small" style="max-height:14px;overflow:hidden">${esc(r.brand||'')}</div></div>`;}).join('')}</div></div>`;
+  // 3모델 이상은 기존처럼 한 줄 전체, 1~2모델짜리는 모아서 한 줄에 최대 3그룹
+  const bigG=gl.filter(([,rs])=>rs.length>=3), smallG=gl.filter(([,rs])=>rs.length<3);
+  let gh=bigG.map(([sub,rs])=>gBox(sub,rs,false)).join('');
+  for(let i=0;i<smallG.length;i+=3){
+    const row=smallG.slice(i,i+3);
+    gh+=`<div style="display:grid;grid-template-columns:repeat(${row.length},minmax(0,1fr));gap:10px;margin-bottom:10px;align-items:start">${row.map(([sub,rs])=>gBox(sub,rs,true)).join('')}</div>`;
+  }
+  h+=gh||'<div class="small">레퍼런스 없음</div>';
   h+=`</div>`;
   $('#cellDetail').innerHTML=h;
   if(!keep)$('#cellDetail').scrollIntoView({behavior:'smooth',block:'nearest'});
