@@ -53,7 +53,7 @@ progress{width:100%;height:8px}
 </head>
 <body>
 <header>
-  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-157</span></h1>
+  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-159</span></h1>
   <div id="scopeBar" class="hide" style="display:flex;gap:6px;align-items:center;margin-left:16px">
     <select id="selBrand" style="padding:4px 6px;font-size:12px"></select>
     <span style="opacity:.4">›</span>
@@ -265,6 +265,13 @@ progress{width:100%;height:8px}
       <textarea id="inModelSpec" rows="2" style="width:480px;font-size:12px" placeholder="예) 20대 후반 동아시아 여성 모델, 자연스러운 헤어·미니멀 메이크업, 중립 배경 — (모델 기준을 여기에 입력하면 피팅컷에 반영됩니다)"></textarea>
       <input type="password" id="inGKey" placeholder="Gemini 키 AIza…(선택)" style="width:190px;font-size:12px">
       <input type="hidden" id="inGModel" value="gemini-3-pro-image-preview">
+    </div>
+    <div class="row" style="margin-top:6px;gap:8px;align-items:center;flex-wrap:wrap">
+      <span class="small">피팅컷 모델 사진(고정):</span>
+      <input type="file" id="inFaceRef" accept="image/*" multiple style="font-size:12px">
+      <button class="act" id="btnFaceRefClear" style="padding:3px 10px;font-size:11px;background:var(--sub)">전체 지우기</button>
+      <span id="faceRefThumbs" style="display:flex;gap:5px;flex-wrap:wrap"></span>
+      <span class="small" id="faceRefStat" style="color:var(--sub)">모델 사진을 여러 장 올려두면 그 <b>같은 인물</b>로 피팅컷이 생성됩니다(옷만 교체). 브라우저에 저장돼요.</span>
     </div>
     <div id="shoeModelWrap" class="row" style="margin-top:8px;gap:8px;align-items:flex-start;flex-wrap:wrap">
       <span class="small" style="padding-top:6px;width:100%">👟 슈즈 피팅 모델 <span style="color:var(--sub)">— SHOES 프로젝트 전용. 이 모델룩들을 <b>순환</b>하며 신깁니다. <b>양말=운동화·닫힌 신발</b> 베이스 / <b>맨발=샌들</b> 베이스. 배지를 눌러 전환, 사진을 추가/삭제할 수 있어요.</span>
@@ -2454,7 +2461,7 @@ function cadArtPhrase(){ return '흰 배경·검은 라인의 깔끔한 플랫 �
 function brandLogoRule(){
   if(CUR_BRAND==='MLB') return LOGO_RULE;
   const b=CUR_BRAND;
-  if(b==='DUVETICA') return 'DUVETICA 시그니처 러버 패치를 반드시 넣으세요 — 왼쪽 가슴 위쪽에 방패(육각·아래가 뾰족한) 형태의 작은 러버 배지, 검정 바탕에 가는 흰 테두리, 그 안에 흰색 대문자 산세리프로 DUVETICA 워드마크. 딱 한 번, 가슴 높이에, 과하지 않은 크기로 정확한 비율로 배치하세요(어두운 원단에는 톤온톤 블랙 온 블랙도 가능). 입력 레퍼런스나 CAD에 다른 브랜드의 로고·워드마크·모노그램·시그니처 패턴(예: LV·Dior·Prada·Miu Miu·Gucci·Moncler 등)이 보이면 전부 지우고 DUVETICA 패치만 남기세요. 타 브랜드 로고·시그니처는 절대 넣지 마세요. ';
+  if(b==='DUVETICA') return 'DUVETICA 배지를 왼쪽 가슴 위쪽에 반드시 넣으세요. 형태: 가로로 긴 판형(가로:세로 약 3:1) — 모서리가 둥근 직사각형이며 아래쪽 변 가운데가 얕게 아래로 뾰족하게 내려온 배너/네임플레이트 모양입니다. 세로로 긴 방패나 문장(crest), 원형, 다이아몬드 형태가 아닙니다. 검정 바탕에 같은 윤곽을 따라가는 가는 흰 테두리, 그 안에 흰색 볼드 대문자 산세리프로 DUVETICA를 판 폭에 꽉 차게 넣으세요. 딱 한 번만, 작고 정확한 비율로 배치하세요(어두운 원단에는 톤온톤 블랙 온 블랙 가능). 입력 레퍼런스나 CAD에 다른 브랜드의 로고·워드마크·모노그램·시그니처 패턴(예: LV·Dior·Prada·Miu Miu·Gucci·Moncler 등)이 보이면 전부 지우고 DUVETICA 배지만 남기세요. 타 브랜드 로고·시그니처는 절대 넣지 마세요. ';
   return `${b} 브랜드 아이덴티티에 맞게 로고/라벨은 톤온톤으로 은은하게(제품에 원래 있는 위치·형태로만) 처리하세요. 입력 레퍼런스나 CAD에 다른 브랜드의 로고·워드마크·모노그램·시그니처 패턴이 보이면 전부 지우세요. ${b} 외 타 브랜드 로고·시그니처는 절대 넣지 마세요. `;
 }
 const LOGO_RULE='MLB의 기존 로고를 반드시 반영하세요 — MLB NY 마크 또는 MLB 마크. 입력한 레퍼런스나 CAD에 다른 브랜드의 로고·워드마크·모노그램·시그니처 패턴(예: LV·Dior·Prada·Miu Miu 등)이 보이면 전부 지우고 MLB 로고만 남기세요. 타 브랜드 로고·시그니처는 결과물에 절대 넣지 마세요. ';
@@ -2589,7 +2596,7 @@ window.genNewCard=async(key,subEnc,gid,mode)=>{
     :'Premium quiet-luxury styling, minimal and refined coordination, timeless elegant pieces, understated tailoring, sophisticated grown-up mood — do NOT over-style or make it look too young or too busy.';
   const brandLogoLine=isMLB
     ?'The outfit prominently features an MLB NY logo embroidered or printed on the clothing.'
-    :'BRAND MARK (required): the garment carries the DUVETICA signature rubber patch on the upper-left chest — a small shield//hexagon-shaped badge with a flat bottom point, black ground with a thin white outline and the word DUVETICA in white uppercase sans-serif across it (tone-on-tone black-on-black is fine on dark bodies). Place it once, chest height, subtle and correctly proportioned — never oversized, never repeated, and no other brand logos, monograms or signature patterns anywhere.';
+    :'BRAND MARK (required): the garment carries the DUVETICA badge on the upper-left chest. SHAPE: a WIDE HORIZONTAL plaque, landscape orientation roughly 3:1 (about three times wider than tall) — a rounded rectangle whose BOTTOM EDGE steps down to a shallow point at the centre, like a flat banner or nameplate. It is NOT a vertical shield, NOT a crest, NOT a circle, NOT a diamond. STYLE: solid black ground with a thin white inner outline following the same outline shape, and the single word DUVETICA in white bold uppercase sans-serif filling the width of the plaque. Place it once only, small and correctly proportioned, upper-left chest height (tone-on-tone black-on-black is acceptable on dark fabrics). No other brand logos, monograms or signature patterns anywhere.';
   // ===== 레퍼에서 디자인 포인트 키워드 추출 → 메인바디 + 몇 개만 조합(복제 아님) =====
   const gmodels=[...new Set(g.refs.map(r=>r.model).filter(Boolean))].slice(0,40);
   let axList=[];
@@ -2693,10 +2700,10 @@ window.genNewCard=async(key,subEnc,gid,mode)=>{
   const attrHint=(kws.length?` Trend cues for color/material only: ${kws.join(', ')}.`:'');
   const studio='bright white studio background, clean soft lighting, minimalist backdrop, professional fashion shoot. Photorealistic, editorial fashion photography, high quality. No text, no watermarks. Centered composition, subject fills ~85% of the vertical frame, identical scale and framing every time.';
   // 리얼 제품컷(모델 없이) — 조합 디자인
-  let realPrompt=`Photorealistic studio product photograph of the garment on an invisible ghost-mannequin (NO person), front view. ${brandLogoLine} ${combo}${attrHint} True-to-life fabric texture (down loft, quilting depth, sheen).${isMLB?'':' Double-check before finishing: the DUVETICA shield patch must be visible on the upper-left chest.'} ${studio}`;
+  let realPrompt=`Photorealistic studio product photograph of the garment on an invisible ghost-mannequin (NO person), front view. ${brandLogoLine} ${combo}${attrHint} True-to-life fabric texture (down loft, quilting depth, sheen).${isMLB?'':' Double-check before finishing: the wide horizontal DUVETICA nameplate badge (3:1 landscape, pointed bottom centre) must be visible on the upper-left chest.'} ${studio}`;
   // 피팅컷 프롬프트 — "첨부한 (생성된 제품) 이미지의 옷을 그대로" 모델에 입힘
   const fitStudio=isMLB?studio:(DV_STUDIO+' Photorealistic, editorial fashion photography, high quality. No text, no watermarks. Centered composition, subject fills ~85% of the vertical frame, identical scale and framing every time.');
-  let fitPrompt=`${modelHead} ${mood} {{POSE}} She is wearing EXACTLY the garment shown in the attached image, reproduced faithfully (same silhouette, length, color, surface, trims and details) — do not add or remove features, and keep the same hem length.${lengthLine} {{COORD}} ${brandLogoLine}${isMLB?'':' Keep the DUVETICA chest patch visible and legible.'} ${fitStudio}`;
+  let fitPrompt=`${modelHead} ${mood} {{POSE}} She is wearing EXACTLY the garment shown in the attached image, reproduced faithfully (same silhouette, length, color, surface, trims and details) — do not add or remove features, and keep the same hem length.${lengthLine} {{COORD}} ${brandLogoLine}${isMLB?'':' Keep the wide horizontal DUVETICA nameplate badge on the chest visible and legible.'} ${fitStudio}`;
   const fitCoords=isMLB?FIT_COORDS_STREET:FIT_COORDS_LUX;
   // ===== 👟 SHOES 전용 분기: 실사 페어 슈즈(레퍼 요소 조합·복제 아님) + 모델 피팅컷 =====
   let fitInputsExtra=[], shoeMeta='';
@@ -2811,6 +2818,47 @@ window.genNewCard=async(key,subEnc,gid,mode)=>{
   }catch(e){ ph.innerHTML=`<div class="small" style="color:var(--err)">생성 실패: ${esc(String(e.message).slice(0,120))}</div>`; if(msg)msg.textContent='생성 실패 — 엔진/키 확인'; }
 };
 // 원하는 제품샷에서만 피팅컷 생성
+/* ===== 피팅컷 고정 모델 사진(여러 장) ===== */
+let FACE_REFS=[];
+try{const _r=localStorage.getItem('mx_face_refs'); if(_r)FACE_REFS=JSON.parse(_r)||[];}catch(e){FACE_REFS=[];}
+function saveFaceRefs(){
+  const st=$('#faceRefStat');
+  try{localStorage.setItem('mx_face_refs',JSON.stringify(FACE_REFS));}
+  catch(err){ if(st)st.textContent='사진 용량이 커서 이번 세션에만 유지됩니다.'; }
+}
+function paintFaceRefs(){
+  const w=$('#faceRefThumbs'); if(!w)return;
+  w.innerHTML=FACE_REFS.map((d,i)=>`<span style="position:relative;display:inline-block"><img src="${d}" style="height:54px;border-radius:6px;border:1px solid var(--line)"><button data-faceref-del="${i}" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;line-height:16px;border-radius:50%;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:11px;padding:0">×</button></span>`).join('');
+}
+document.addEventListener('DOMContentLoaded',paintFaceRefs);
+setTimeout(paintFaceRefs,300);
+document.addEventListener('change',async e=>{
+  if(e.target&&e.target.id==='inFaceRef'){
+    const fs=[...(e.target.files||[])]; if(!fs.length)return;
+    const st=$('#faceRefStat');
+    for(const f of fs){
+      try{
+        const dataUrl=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f);});
+        FACE_REFS.push(dataUrl);
+      }catch(err){}
+    }
+    if(FACE_REFS.length>6)FACE_REFS=FACE_REFS.slice(-6);   // 최대 6장
+    saveFaceRefs(); paintFaceRefs(); e.target.value='';
+    if(st&&!/세션/.test(st.textContent))st.textContent=`모델 사진 ${FACE_REFS.length}장 저장됨 — 피팅컷은 이 인물로 생성됩니다.`;
+  }
+});
+document.addEventListener('click',e=>{
+  const del=e.target&&e.target.getAttribute&&e.target.getAttribute('data-faceref-del');
+  if(del!==null&&del!==undefined&&del!==''){
+    FACE_REFS.splice(+del,1); saveFaceRefs(); paintFaceRefs(); return;
+  }
+  if(e.target&&e.target.id==='btnFaceRefClear'){
+    FACE_REFS=[]; try{localStorage.removeItem('mx_face_refs');}catch(err){}
+    const fi=$('#inFaceRef'); if(fi)fi.value='';
+    paintFaceRefs();
+    const st=$('#faceRefStat'); if(st)st.textContent='모델 사진 해제 — 텍스트 기준으로 생성됩니다.';
+  }
+});
 window.genFitting=async(gid,ci,key,subEnc)=>{
   const st=GEN_STATE[gid]; const src=st&&st.cands[ci]; if(!src||src.kind!=='real'){alert('제품샷 카드에서만 피팅컷을 생성할 수 있어요.');return;}
   const box=$('#genbox_'+gid), msg=$('#genmsg_'+gid);
@@ -2823,11 +2871,12 @@ window.genFitting=async(gid,ci,key,subEnc)=>{
   if(msg)msg.textContent='피팅컷 생성 중…';
   try{
     const genImg=src.genImg||src.url;                 // 생성된 제품샷(IMAGE1) → 모델에 착장. 슈즈는 모델룩(IMAGE2)도 함께
-    const inputs=[genImg,...(src.fitInputs||[])].filter(Boolean);
+    const inputs=[genImg,...(src.fitInputs||[]),...FACE_REFS].filter(Boolean);
     let fp=src.fitPrompt;
     if(fp&&fp.indexOf('{{POSE}}')>=0){   // 옷 피팅컷: 생성마다 포즈·코디 랜덤(얼굴/모델은 그대로)
       const _isDV=(CUR_BRAND!=='MLB');
       fp=fp.replace('{{POSE}}',_isDV?DV_POSE:pick(FIT_POSES)).replace('{{COORD}}',_isDV?DV_COORD:pick(src.fitCoords||FIT_COORDS_STREET));
+      if(FACE_REFS.length)fp='MODEL IDENTITY (fixed): the FIRST attached image is the GARMENT to be worn. Every image after it is a REFERENCE PHOTO OF THE HOUSE MODEL. Reproduce that same woman exactly — same face and facial proportions, same hair colour, length and styling, same skin tone, same body proportions and height. She is the fixed house model used for every look; never invent a different person, never blend in other faces, and do not copy the clothing from the model reference photos. Only the garment from the first image changes. '+fp;
     }
     const url=await realImage(inputs,fp);
     const nci=st.cands.length;
