@@ -53,7 +53,7 @@ progress{width:100%;height:8px}
 </head>
 <body>
 <header>
-  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-147</span></h1>
+  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-148</span></h1>
   <div id="scopeBar" class="hide" style="display:flex;gap:6px;align-items:center;margin-left:16px">
     <select id="selBrand" style="padding:4px 6px;font-size:12px"></select>
     <span style="opacity:.4">›</span>
@@ -147,6 +147,10 @@ progress{width:100%;height:8px}
       <div class="row">
         <button class="act" id="btnRelabelLD" style="background:var(--acc)">라인·DNA 규칙+학습으로 다시 채우기</button>
         <span class="small" id="relabelLDStat"></span>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="act" id="btnResubcat" style="background:var(--acc2)">서브카테고리 새 규칙으로 다시 계산</button>
+        <span class="small" id="resubcatStat" style="color:var(--sub)">AI 재호출 없이, 이미 저장된 라벨(구조 판독값)만으로 서브카테고리를 새 분류체계(10그룹 · 퀼팅 · 칼라 · 중량)로 다시 붙입니다. 손으로 지은 그룹명도 덮어씁니다.</span>
       </div>
       <div class="row" style="margin-top:10px">
         <button class="act" id="btnNormBrand" style="background:#7a6f5e">브랜드명 대문자 통일 (Miu Miu→MIU MIU)</button>
@@ -953,6 +957,29 @@ $('#btnRejudge').onclick=async()=>{
 };
 
 /* ----- 라인·DNA 규칙+학습 재판정 (매트릭스 칸 재배치) ----- */
+$('#btnResubcat').onclick=async()=>{
+  if(!confirm('이미 저장된 라벨을 바탕으로 서브카테고리를 새 분류체계로 다시 계산합니다.\n(AI 재호출 없음 · 손으로 지은 그룹명도 덮어씁니다)\n계속할까요?'))return;
+  const stat=$('#resubcatStat'); stat.textContent='불러오는 중…';
+  const prods=(await sel('products','select=model_key,subcategory,project,category&limit=8000')).filter(inScope);
+  const labs=await sel('labels','select=model_key,axes&limit=8000');
+  const LB={}; labs.forEach(l=>LB[l.model_key]=l);
+  let chg=0,same=0,noLab=0,i=0; const q=[...prods];
+  async function worker(){
+    while(q.length){
+      const p=q.shift(); i++;
+      const lb=LB[p.model_key];
+      if(!lb||!lb.axes){noLab++; continue;}
+      const sub=outerSub(lb.axes);
+      if(sub && sub!==p.subcategory){
+        try{await upd('products','model_key=eq.'+encodeURIComponent(p.model_key),{subcategory:sub});chg++;}catch(e){}
+      } else same++;
+      if(i%25===0)stat.textContent=`${i}/${prods.length}…`;
+    }
+  }
+  await Promise.all([worker(),worker(),worker()]);
+  stat.textContent=`완료 — 변경 ${chg} · 그대로 ${same} · 라벨 없음 ${noLab}. 04에서 매트릭스 계산하면 새 그룹으로 묶입니다.`;
+  if(typeof refreshLabList==='function')refreshLabList();
+};
 $('#btnRelabelLD').onclick=async()=>{
   if(!confirm('모든 제품의 라인·DNA를 학습 보정 + 규칙으로 다시 채웁니다.\nCSV·수동으로 넣은 라인·DNA도 규칙값으로 덮어씁니다. (04 "이 그룹 DNA →" 학습은 우선 적용)\n계속할까요?'))return;
   const stat=$('#relabelLDStat'); stat.textContent='불러오는 중…';
@@ -1347,10 +1374,16 @@ KEY RULES:
  BELT does not decide lifestyle: cozy tactile surface+belt ⇒ HOLIDAY; sleek commute form+belt ⇒ URBAN_LUX; technical waist adjustment ⇒ LUX_ACTIVE.
  Glossy hooded puffer, classic baffles, packable/light layer, vest, technical parka, ski garment ⇒ LUX_ACTIVE (NOT holiday).
  Stand collar, zipper, short length are NEUTRAL (score 0). Color alone = 0. Gold hardware alone = +1 URBAN only.
+STRUCTURE FIELDS (report independently of lifestyle):
+ hem=RIB only when a knit ribbed band is visible at the hem or cuffs. Drawcord/elastic gathering is NOT rib.
+ sleeves=NONE for vests/gilets. sleeves=CAPE when the body and arms form one open cape/poncho panel with no set-in sleeve seam.
+ CAPE/PONCHO: wide A-line one-piece silhouette, arms covered by the body panel, open or slit sides, no sleeve construction ⇒ base_item_form=CAPE or PONCHO and sleeves=CAPE.
+ quilting=QUILTED only when stitch lines/baffles are visible on the outer face; smooth outer face with hidden chambers ⇒ NON_QUILTED.
+ collar=FUR_COLLAR when a fur/shearling collar sits on a non-fur body. Do NOT report NONE when a fur collar is present.
 SCORING: compute URBAN_LUX / LUX_ACTIVE / HOLIDAY scores. If top score <5 OR top two tie ⇒ lifestyle=UNKNOWN (never force by brand). Gap>=3 ⇒ conf .9; gap2 ⇒ .75; gap1 ⇒ .6; tie ⇒ .5+review. Brand is NOT evidence: apply +0.5 only to break an exact tie, never override product signals.
 WEIGHT (insulation_weight; loft/fill not thickness; official text > numeric spec > image; EXTREME never image-only; no MID default on missing): ULTRALIGHT=ultralight/very-light+packable/liner, flat+shallow channels. LIGHT=lightweight/lightly padded/transitional, low loft. MID=midweight/standard winter puffer, rounded chambers. HIGH=high-loft/heavyweight/deep-winter, big baffles+thick hood/collar. EXTREME=expedition/official temp rating only. UNKNOWN if <2 signals or conflict.
 Return ONLY one JSON object:
-{"scope":"INSULATED_OUTER|NON_INSULATED|OUT_OF_SCOPE|UNKNOWN","fill_type":"DOWN|SYNTHETIC|HYBRID|UNKNOWN","insulation_weight":"ULTRALIGHT|LIGHT|MID|HIGH|EXTREME|UNKNOWN","weight_basis":"SPEC_CONFIRMED|TEXT_CONFIRMED|COMBINED|VISUAL_ESTIMATE|UNKNOWN","base_item_family":"URBAN|ACTIVE|HOLIDAY|UNKNOWN","base_item_form":"COLLARED_PADDING|TWEED_JACKET|KNIT_PUFFER|SHACKET|BLOUSON|BOMBER|TAILORED_PADDING|BALMACAAN_COAT|TRENCH|GLOSSY_HOODED_PUFFER|CLASSIC_DOWN|PACKABLE_LIGHT|DOWN_VEST|SKI_PADDING|FULL_FUR|SHEARLING_AVIATOR|SUEDE_FURTRIM|BRUSHED_HERITAGE_PUFFER|...","length":"CROPPED|SHORT|HIP|MID|LONG|MAXI|UNKNOWN","surface":["MATTE|LIGHT_GLOSS|HIGH_GLOSS|TWEED|BOUCLE|KNIT|WOOL|CORDUROY|BRUSHED|FULL_FUR|SHEARLING|SUEDE|LEATHER|TECHNICAL"],"collar":"NONE|SHIRT|TAILORED|STAND|HOOD|OVERSIZED_HOOD|FUR_COLLAR|SHAWL","hood":"NONE|PLAIN|OVERSIZED|FUR_TRIM","waist":"NONE|DRAWCORD|ELASTIC|BELT","lifestyle":"URBAN_LUX|HOLIDAY_CAPSULE|LUX_ACTIVE|UNKNOWN","look_subtype":"look code","secondary_lifestyle":"URBAN_LUX|HOLIDAY_CAPSULE|LUX_ACTIVE|NONE","scores":{"URBAN_LUX":0,"LUX_ACTIVE":0,"HOLIDAY_CAPSULE":0},"confidence":0-100,"review_needed":true,"design_note":"\ud55c\uad6d\uc5b4 1~2\ubb38\uc7a5 \uadfc\uac70"}`;
+{"scope":"INSULATED_OUTER|NON_INSULATED|OUT_OF_SCOPE|UNKNOWN","fill_type":"DOWN|SYNTHETIC|HYBRID|UNKNOWN","insulation_weight":"ULTRALIGHT|LIGHT|MID|HIGH|EXTREME|UNKNOWN","weight_basis":"SPEC_CONFIRMED|TEXT_CONFIRMED|COMBINED|VISUAL_ESTIMATE|UNKNOWN","base_item_family":"URBAN|ACTIVE|HOLIDAY|UNKNOWN","base_item_form":"COLLARED_PADDING|TWEED_JACKET|KNIT_PUFFER|SHACKET|BLOUSON|BOMBER|TAILORED_PADDING|BALMACAAN_COAT|TRENCH|GLOSSY_HOODED_PUFFER|CLASSIC_DOWN|PACKABLE_LIGHT|DOWN_VEST|SKI_PADDING|FULL_FUR|SHEARLING_AVIATOR|SUEDE_FURTRIM|BRUSHED_HERITAGE_PUFFER|CAPE|PONCHO|CARDIGAN_DOWN|...","length":"CROPPED|SHORT|HIP|MID|LONG|MAXI|UNKNOWN","surface":["MATTE|LIGHT_GLOSS|HIGH_GLOSS|TWEED|BOUCLE|KNIT|WOOL|CORDUROY|BRUSHED|FULL_FUR|SHEARLING|SUEDE|LEATHER|TECHNICAL"],"collar":"NONE|SHIRT|TAILORED|STAND|HOOD|OVERSIZED_HOOD|FUR_COLLAR|SHAWL","hood":"NONE|PLAIN|OVERSIZED|FUR_TRIM","waist":"NONE|DRAWCORD|ELASTIC|BELT","hem":"NONE|RIB|DRAWCORD|ELASTIC|BAND|STRAIGHT","sleeves":"LONG|SHORT|NONE|CAPE","quilting":"QUILTED|NON_QUILTED","lifestyle":"URBAN_LUX|HOLIDAY_CAPSULE|LUX_ACTIVE|UNKNOWN","look_subtype":"look code","secondary_lifestyle":"URBAN_LUX|HOLIDAY_CAPSULE|LUX_ACTIVE|NONE","scores":{"URBAN_LUX":0,"LUX_ACTIVE":0,"HOLIDAY_CAPSULE":0},"confidence":0-100,"review_needed":true,"design_note":"\ud55c\uad6d\uc5b4 1~2\ubb38\uc7a5 \uadfc\uac70"}`;
 
 // ===== MLB OUTERWEAR ASSORTMENT — 최종 taxonomy v2 판정 프롬프트 =====
 const MLB_OUTER_PROMPT=`You are the MLB Assortment Agent OUTERWEAR classifier. Use product structure/material/surface/function AND confirmed brand lineage together. Judge from the product image (and any given text) only — never infer from background, model, or styling.
@@ -1450,36 +1483,60 @@ function subcatOf(m,lb){
 // 아우터 세부 서브카테고리 이름 생성 — 의복 + 핵심 속성(후드/칼라/경량/럭스). 예: COLLARLESS LIGHT DOWN, LUX BOMBER, HOODED PUFFER.
 function outerSub(a){
   a=a||{};
-  const collar=String(a.collar||'').toUpperCase();
-  const hoodF=String(a.hood||'').toUpperCase();
-  const ls=String(a.look_subtype||'').toUpperCase();
-  const saysTailored=/TAILORED|STAND|SHIRT|COLLAR(?!LESS)|LAPEL|WOOL|BALMACAAN|TRENCH|BLAZER/.test(ls);
-  const saysHood=/HOOD/.test(ls);
-  // look_subtype이 후드를 명시하면 후드, 테일러드/칼라를 명시하면 칼라. 그 외엔 collar·hood 필드로 판단.
-  const hood = saysHood || (!saysTailored && (/HOOD/.test(collar) || (hoodF && hoodF!=='NONE')));
-  const collarless=(!hood)&&(saysTailored||collar==='NONE'||collar===''||collar==='STAND'||collar==='SHIRT'||collar==='TAILORED');
-  const w=String(a.insulation_weight||'').toUpperCase();
-  const light=(w==='ULTRALIGHT'||w==='LIGHT');
-  const heavy=(w==='HIGH'||w==='EXTREME');
+  const U=v=>String(v||'').toUpperCase();
   const surf=(Array.isArray(a.surface)?a.surface.join(' '):String(a.surface||'')).toUpperCase();
-  const lux=/LEATHER|SHEARLING|VELVET|HIGH_GLOSS|SATIN/.test(surf)||/FUR_TRIM/.test((Array.isArray(a.details)?a.details.join(' '):'').toUpperCase());
-  const f=String(a.base_item_form||a.item_form||a.look_subtype||'').toUpperCase();
-  let g='DOWN JACKET';
-  if(/\bVEST\b|GILET/.test(f))g='VEST';
-  else if(/OVERSHIRT|SHACKET|SHIRT/.test(f))g='SHIRT JACKET';
-  else if(/BOMBER/.test(f))g='BOMBER';
-  else if(/BLOUSON/.test(f))g='BLOUSON';
-  else if(/CARDIGAN/.test(f))g='CARDIGAN';
-  else if(/PARKA/.test(f))g='PARKA';
-  else if(/SKI/.test(f))g='SKI JACKET';
-  else if(/\bCOAT\b/.test(f))g='COAT';
-  else if(/PUFFER|PADDED|QUILT/.test(f))g='PUFFER';
-  const adj=[];
-  if(lux)adj.push('LUX');
-  if(light)adj.push('LIGHT'); else if(heavy)adj.push('HEAVY');
-  if(hood)adj.push('HOODED'); else if(collarless&&g!=='VEST')adj.push('COLLARLESS');
-  const name=(adj.join(' ')+' '+g).trim();
-  return name||'기타';
+  const form=U(a.base_item_form||a.item_form||a.look_subtype);
+  const collar=U(a.collar), hoodF=U(a.hood), waist=U(a.waist), hem=U(a.hem);
+  const w=U(a.insulation_weight);
+  const sleeves=U(a.sleeves);          // NONE|SHORT|LONG|CAPE (신규 필드, 없으면 추론)
+  const quilt=U(a.quilting||a.quilt);  // QUILTED|NON_QUILTED (신규, 없으면 추론)
+
+  /* ---- 보조 판정 ---- */
+  const hood   = /HOOD/.test(collar) || (hoodF && hoodF!=='NONE') || /HOOD/.test(form);
+  const furCol = /FUR_COLLAR/.test(collar) || /FUR_TRIM/.test(hoodF) || /SHEARLING_AVIATOR|SUEDE_FURTRIM/.test(form);
+  const fullFur= /FULL_FUR|SHEARLING|SHERPA|FLEECE/.test(surf) || /FULL_FUR/.test(form);
+  const shirtC = /SHIRT/.test(collar) || /SHACKET|OVERSHIRT|SHIRT/.test(form);
+  const rib    = /RIB/.test(hem) || /RIB/.test(collar) || /RIB/.test(form) || /BOMBER/.test(form);
+  const belted = waist==='BELT' || /BELT|WAISTED|DRAWCORD_WAIST|CINCH/.test(form);
+  const vest   = sleeves==='NONE' || /\bVEST\b|GILET/.test(form);
+  const cape   = sleeves==='CAPE' || /CAPE|PONCHO/.test(form);
+  const hybrid = /KNIT|JERSEY|WOOL|TWEED|BOUCLE|CORDUROY|LEATHER|SUEDE/.test(surf) && /TECHNICAL|MATTE|GLOSS|NYLON/.test(surf);
+  const light  = (w==='ULTRALIGHT'||w==='LIGHT');
+  const heavy  = (w==='HIGH'||w==='EXTREME');
+  const cardi  = /CARDIGAN/.test(form) || (/KNIT/.test(surf) && !hood && collar==='NONE');
+
+  /* ---- 메인 그룹 (지정 우선순위) ---- */
+  let g;
+  if(light && !vest && !cape && !fullFur && !shirtC && !rib) g='LIGHTWEIGHT DOWN';
+  else if(shirtC)   g='SHIRT JACKET';
+  else if(rib)      g='BOMBER / BLOUSON';
+  else if(cardi)    g='CARDIGAN DOWN';
+  else if(hybrid)   g='HYBRID DOWN';
+  else if(belted)   g='WAISTED / BELTED PUFFER';
+  else if(vest)     g='VEST';
+  else if(fullFur)  g='FUR / SHERPA DOWN';
+  else if(cape)     g='CAPE / PONCHO';
+  else if(/PUFFER|PADDED|QUILT|DOWN|PACKABLE|CLASSIC/.test(form)||a.fill_type) g='BASIC PUFFER';
+  else              g='NEW STYLE';
+
+  /* ---- SURFACE 태그 ---- */
+  let qTag;
+  if(quilt==='QUILTED'||quilt==='NON_QUILTED') qTag=(quilt==='QUILTED')?'QUILTED':'NON-QUILTED';
+  else qTag = /QUILT|BAFFLE|PUFFER|PADDED/.test(form) ? 'QUILTED' : 'NON-QUILTED';
+
+  /* ---- COLLAR 태그 ---- */
+  let cTag;
+  if(fullFur)      cTag='FULL FUR';
+  else if(furCol)  cTag = hood ? 'FUR HOOD' : 'FUR COLLAR';
+  else if(hood)    cTag='HOODED';
+  else if(/STAND/.test(collar)) cTag='STAND';
+  else if(collar&&collar!=='NONE') cTag='COLLARED';
+  else             cTag='COLLARLESS';
+
+  /* ---- FILL 태그 ---- */
+  const fTag = light?'LIGHTWEIGHT':(heavy?'HEAVY':'STANDARD');
+
+  return [g,qTag,cTag,fTag].join(' · ');
 }
 function signalsFromAxes(a){const s=[];
   if(a.PROFILE==='LOW'&&(a.sole_height_level||9)<=2)s.push('LOW_PROFILE');
