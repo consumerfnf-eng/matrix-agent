@@ -53,7 +53,7 @@ progress{width:100%;height:8px}
 </head>
 <body>
 <header>
-  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-146</span></h1>
+  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-147</span></h1>
   <div id="scopeBar" class="hide" style="display:flex;gap:6px;align-items:center;margin-left:16px">
     <select id="selBrand" style="padding:4px 6px;font-size:12px"></select>
     <span style="opacity:.4">›</span>
@@ -399,7 +399,30 @@ function normRows(rows){ // PostgREST 벌크 insert는 모든 객체 키가 같�
   return rows.map(r=>{const o={};keys.forEach(k=>o[k]=(r&&k in r)?r[k]:null);return o;});
 }
 const ins=(t,rows,extra='')=>api(`/rest/v1/${t}${extra}`,{method:'POST',body:JSON.stringify(normRows(rows)),headers:{'Prefer':'return=representation'}});
-const sel=(t,q='')=>api(`/rest/v1/${t}?${q}`);
+/* PostgREST 기본 max-rows(1000) 때문에 limit을 크게 줘도 잘린다 → Range로 나눠 전부 가져옴 */
+async function sel(t,q=''){
+  const PAGE=1000;
+  // 쿼리에 명시된 limit이 있으면 그 수까지만(없으면 전부)
+  const mLim=/(?:^|&)limit=(\d+)/.exec(q);
+  const want=mLim?+mLim[1]:Infinity;
+  let out=[],from=0;
+  while(from<want){
+    const size=Math.min(PAGE,want-from);
+    let page;
+    try{
+      page=await api(`/rest/v1/${t}?${q}`,{headers:{'Range-Unit':'items','Range':`${from}-${from+size-1}`}});
+    }catch(e){
+      if(from===0)throw e;   // 첫 페이지 실패는 그대로 에러
+      break;                  // 이후 페이지 실패는 지금까지 것 반환
+    }
+    if(!Array.isArray(page)){ return page; }   // 배열이 아니면(단건·텍스트) 그대로
+    out=out.concat(page);
+    if(page.length<size)break;                 // 마지막 페이지
+    from+=page.length;
+    if(out.length>50000)break;                 // 안전장치
+  }
+  return out;
+}
 const upd=(t,q,body)=>api(`/rest/v1/${t}?${q}`,{method:'PATCH',body:JSON.stringify(body)});
 const del_=(t,q)=>api(`/rest/v1/${t}?${q}`,{method:'DELETE'});
 const upsert=(t,rows,onconf)=>api(`/rest/v1/${t}?on_conflict=${onconf}`,{method:'POST',body:JSON.stringify(normRows(rows)),headers:{'Prefer':'resolution=merge-duplicates,return=minimal'}});
