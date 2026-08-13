@@ -53,7 +53,7 @@ progress{width:100%;height:8px}
 </head>
 <body>
 <header>
-  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-159</span></h1>
+  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-163</span></h1>
   <div id="scopeBar" class="hide" style="display:flex;gap:6px;align-items:center;margin-left:16px">
     <select id="selBrand" style="padding:4px 6px;font-size:12px"></select>
     <span style="opacity:.4">›</span>
@@ -1367,7 +1367,7 @@ $('#btnFailCsv').onclick=async()=>{
 
 /* ============ 03 라벨링 ============ */
 const AXES_PROMPT=`당신은 신발 이미지의 물리 구조만 관찰합니다. 브랜드·용도·트렌드 판단 금지.
-JSON만 출력: {"PROFILE":"LOW|MID|HIGH","toe_shape":"ROUND|POINTED|SQUARE|ALMOND|SOFT_ROUND","toe_openness":"OPEN|CLOSED","sole_height_level":1,"sole_family":"CUPSOLE|VULCANIZED|EVA_FOAM|LUG|FLAT_UNIT|PLATFORM|UNKNOWN","closure":"LACE|SLIP_ON|STRAP|VELCRO|ZIP|NONE","strap_count":0,"toe_post":false,"open_back":false,"upper_material":"LEATHER|SUEDE|MESH|CANVAS|KNIT|SYNTHETIC|SHEARLING|RUBBER|SATIN|PATENT|MIX","overlay_count":0,"decoration":"NONE|MINIMAL|MODERATE|HEAVY","logo_treatment":"NONE|EMBOSSED|PRINTED|METAL|PATCH|ALLOVER","thermal_material":false,"mesh_present":false,"lace_visible":false,"heel_height":"FLAT|LOW|MID|HIGH","confidence":0-100,"design_note":"한국어 1~2문장"}`;
+JSON만 출력: {"PROFILE":"LOW|MID|HIGH","toe_shape":"ROUND|POINTED|SQUARE|ALMOND|SOFT_ROUND","toe_openness":"OPEN|CLOSED","sole_height_level":1,"sole_family":"CUPSOLE|VULCANIZED|EVA_FOAM|LUG|FLAT_UNIT|PLATFORM|UNKNOWN","closure":"LACE|SLIP_ON|STRAP|VELCRO|ZIP|NONE","lace_type":"FLAT|ROUND|BUNGEE|TOGGLE|SPEED_LACE|NONE","strap_count":0,"toe_post":false,"open_back":false,"upper_material":"LEATHER|SUEDE|MESH|CANVAS|KNIT|SYNTHETIC|SHEARLING|RUBBER|SATIN|PATENT|MIX","overlay_count":0,"decoration":"NONE|MINIMAL|MODERATE|HEAVY","logo_treatment":"NONE|EMBOSSED|PRINTED|METAL|PATCH|ALLOVER","thermal_material":false,"mesh_present":false,"lace_visible":false,"heel_height":"FLAT|LOW|MID|HIGH","confidence":0-100,"design_note":"한국어 1~2문장"}`;
 // 인슐레이션 아우터 분류 프롬프트(INSULATION OUTER FINAL TAXONOMY v4)
 const OUTER_PROMPT=`You classify Duvetica-style INSULATED OUTERWEAR from product images and product text (Taxonomy v5). Extract SURFACE and garment STRUCTURE first; infer lifestyle LAST. Never classify from color or one decorative detail alone.
 CORE — three lifestyles + UNKNOWN:
@@ -1443,13 +1443,32 @@ function archFromAxes(a){ // 규칙 엔진 — 모델을 바꿔도 매트릭스�
   if(a.PROFILE==='LOW')return'SLIM_RETRO';
   return'HYBRID_OTHER';
 }
+// 러너 4분류: 청키 / 트레일 / 아웃도어(끈장식) / 레트로
+function runnerType(a){
+  a=a||{};
+  const U=v=>String(v||'').toUpperCase();
+  const surf=(Array.isArray(a.upper_material)?a.upper_material.join(' '):String(a.upper_material||'')).toUpperCase();
+  const txt=(U(a.look_subtype)+' '+U(a.details)+' '+U(a.lace_type)+' '+U(a.sole_family)+' '+surf);
+  const lug=/LUG|TRAIL|GORE|VIBRAM|OUTSOLE_LUG/.test(txt)||a.sole_family==='LUG';
+  const bungee=/BUNGEE|TOGGLE|CORD_LOCK|CORDLOCK|DRAWCORD|SPEED_LACE|ROPE_LACE|D[_ ]?RING|HOOK_LACE/.test(txt);
+  const chunky=(a.sole_height_level||0)>=4||/CHUNKY|PLATFORM|EXAGGERATED/.test(txt);
+  const retro=/SUEDE|NYLON|GUM|RETRO|VINTAGE|COLORBLOCK|COLOUR_BLOCK/.test(txt)&&(a.sole_height_level||0)<=3;
+  if(lug)      return 'TRAIL RUNNER';
+  if(bungee)   return 'OUTDOOR RUNNER';
+  if(chunky)   return 'CHUNKY RUNNER';
+  if(retro)    return 'RETRO RUNNER';
+  return 'RETRO RUNNER';
+}
 const ARCH_LINE={RUNNER:'RUNNER',CHUNKY_DAD:'CHUNKY',SKATE_VULC:'LINER',COURT_LINER:'LINER',SLIM_RETRO:'LINER',BALLET_FLAT:'SNEAKERS',MARY_JANE:'SNEAKERS',LOAFER:'NEW ITEM',MULE_SLIDE:'SUMMER ITEM',STRAP_SANDAL:'SUMMER ITEM',THONG_SANDAL:'SUMMER ITEM',WINTER:'WINTER ITEM',BOOT:'WINTER ITEM'};
 // 27FW 리포트(영문 서브카테고리, 전부 1:1)에서 학습한 서브카테고리→라인·DNA 고정표. 이 이름으로 잡히면 그 칸으로.
 const SUB_MAP={
   'SKATE SHOES LINER':{line:'LINER',dna:'STREET'},
   'NEW MULE ROAFER':{line:'NEW ITEM',dna:'ALL'},
   'OUTDOOR CHUNKY SNEAKERS':{line:'CHUNKY',dna:'STREET'},
-  'CHUNKY RUNNER':{line:'CHUNKY',dna:'STREET'},
+  'CHUNKY RUNNER':{line:'RUNNER',dna:'STREET'},
+  'RETRO RUNNER':{line:'RUNNER',dna:'STREET'},
+  'TRAIL RUNNER':{line:'RUNNER',dna:'OUTDOOR'},
+  'OUTDOOR RUNNER':{line:'RUNNER',dna:'OUTDOOR'},
   'RUNNER':{line:'RUNNER',dna:'STREET'},
   'FEMININE RUNNER':{line:'RUNNER',dna:'STREET'},
   'PERFORMANCE RUNNER CHUNKY':{line:'CHUNKY',dna:'WELLNESS'},
@@ -1479,7 +1498,7 @@ const SUB_ALIAS={'스니커리나':'BALLETCORE SNEAKERS','스트랩 스니커리
 const canonSub=s=>{s=String(s||'').trim(); return SUB_ALIAS[s]||s;};
 const subMapOf=p=>SUB_MAP[canonSub((p&&p.subcategory)||'')]||null;
 // 서브카테고리(그룹핑 키): 제품의 subcategory 값 우선, 없으면 라벨 원형을 한글 명으로
-const SUBCAT_KO={RUNNER:'RUNNER',COURT_LINER:'COURT CLASSIC LINER',SKATE_VULC:'SKATE SHOES LINER',SLIM_RETRO:'LOW-PROFILE SNEAKERS',CHUNKY_DAD:'PLATFORM CHUNKY',BALLET_FLAT:'BALLETCORE SNEAKERS',MARY_JANE:'MARY-JANE SNEAKERS',LOAFER:'SNEAKERS LOAFER',MULE_SLIDE:'NEW MULE ROAFER',STRAP_SANDAL:'STRAP SANDAL',THONG_SANDAL:'THONG SANDAL',CLOG:'CLOG',BOOT:'WINTER PADDED BOOTS',WINTER:'WINTER PADDED BOOTS',HYBRID_OTHER:'HYBRID'};
+const SUBCAT_KO={RUNNER:'RETRO RUNNER',COURT_LINER:'COURT CLASSIC LINER',SKATE_VULC:'SKATE SHOES LINER',SLIM_RETRO:'LOW-PROFILE SNEAKERS',CHUNKY_DAD:'PLATFORM CHUNKY',BALLET_FLAT:'BALLETCORE SNEAKERS',MARY_JANE:'MARY-JANE SNEAKERS',LOAFER:'SNEAKERS LOAFER',MULE_SLIDE:'NEW MULE ROAFER',STRAP_SANDAL:'STRAP SANDAL',THONG_SANDAL:'THONG SANDAL',CLOG:'CLOG',BOOT:'WINTER PADDED BOOTS',WINTER:'WINTER PADDED BOOTS',HYBRID_OTHER:'HYBRID'};
 function subcatOf(m,lb){
   const s=String(m.p.subcategory||'').trim();
   if(!isShoes()){
@@ -1972,8 +1991,13 @@ function runnerSub(m,lb){
   const laceUp=a.closure==='LACE' || a.lace_visible===true || /lace-?up|레이스업|끈/.test(t);
   // 1) 페미닌(레이스·리본·오간자·핑크 등)은 청키여도 최우선 → FEMININE RUNNER
   if(isFeminine(m,lb) && !isChunkySole(m,lb)) return 'FEMININE RUNNER';         // RUNNER × STREET (청키는 페미닌 아님 → 청키 러너 분기로)
-  // 2) 아웃도어 끈 러너 → OUTDOOR CHUNKY SNEAKERS
-  if(outdoor && laceUp) return 'OUTDOOR CHUNKY SNEAKERS';                      // CHUNKY × STREET
+  // 2) 트레일(러그솔·고어텍스·비브람 등) → TRAIL RUNNER (OUTDOOR 라이프스타일)
+  if(trail || a.sole_family==='LUG' || /vibram|비브람|gore-?tex|고어텍스|hiking|하이킹|terrain|테레인|rugged/.test(t)) return 'TRAIL RUNNER';
+  // 3) 아웃도어 끈 장식(번지·토글·코드락·스피드레이스) → OUTDOOR RUNNER (OUTDOOR)
+  const bungee=/bungee|번지|toggle|토글|cord ?lock|코드락|drawcord|드로우?코드|speed ?lace|스피드레이스|rope ?lace|d-?ring|hook ?lace/.test(t)
+    || /BUNGEE|TOGGLE|CORD_LOCK|DRAWCORD|SPEED_LACE/.test(String(a.lace_type||'').toUpperCase());
+  if(bungee) return 'OUTDOOR RUNNER';
+  if(outdoor && laceUp) return 'OUTDOOR RUNNER';
   // 3) 감싸는 솔 + 로우~미드(비청키) → CITY TRAIL RUNNER
   if(wrapSole && lowMid && !isChunkySole(m,lb)) return 'CITY TRAIL RUNNER';    // RUNNER × WELLNESS
   // 4) 청키 러너 계열
@@ -1986,7 +2010,8 @@ function runnerSub(m,lb){
   const dna=runnerDNA(m,lb);
   if(dna==='WELLNESS') return trail?'CITY TRAIL RUNNER':'PERFORMANCE RUNNER'; // RUNNER × WELLNESS
   if(dna==='PREMIUM SPORTIVE') return 'SOFT DAILY RUNNER';                     // RUNNER × PREMIUM
-  return 'RUNNER';                                                             // RUNNER × STREET
+  if(/suede|스웨이드|nylon|나일론|gum|검솔|retro|레트로|vintage|빈티지|colou?r ?block|컬러블록/.test(t)) return 'RETRO RUNNER';
+  return 'RETRO RUNNER';                                                       // RUNNER × STREET
 }
 function isRunnerFamily(m,lb){const a=axOf(lb); const arch=lb&&lb.primary_archetype;
   const t=[m.p.product_name,m.p.subcategory,m.p.fabric_group].join(' ').toLowerCase();
@@ -2461,7 +2486,7 @@ function cadArtPhrase(){ return '흰 배경·검은 라인의 깔끔한 플랫 �
 function brandLogoRule(){
   if(CUR_BRAND==='MLB') return LOGO_RULE;
   const b=CUR_BRAND;
-  if(b==='DUVETICA') return 'DUVETICA 배지를 왼쪽 가슴 위쪽에 반드시 넣으세요. 형태: 가로로 긴 판형(가로:세로 약 3:1) — 모서리가 둥근 직사각형이며 아래쪽 변 가운데가 얕게 아래로 뾰족하게 내려온 배너/네임플레이트 모양입니다. 세로로 긴 방패나 문장(crest), 원형, 다이아몬드 형태가 아닙니다. 검정 바탕에 같은 윤곽을 따라가는 가는 흰 테두리, 그 안에 흰색 볼드 대문자 산세리프로 DUVETICA를 판 폭에 꽉 차게 넣으세요. 딱 한 번만, 작고 정확한 비율로 배치하세요(어두운 원단에는 톤온톤 블랙 온 블랙 가능). 입력 레퍼런스나 CAD에 다른 브랜드의 로고·워드마크·모노그램·시그니처 패턴(예: LV·Dior·Prada·Miu Miu·Gucci·Moncler 등)이 보이면 전부 지우고 DUVETICA 배지만 남기세요. 타 브랜드 로고·시그니처는 절대 넣지 마세요. ';
+  if(b==='DUVETICA') return 'DUVETICA 배지를 왼쪽 가슴 위쪽에 반드시 넣으세요. 형태: 가로로 긴 판형(가로:세로 약 3:1) — 모서리가 둥근 직사각형이며 아래쪽 변 가운데가 얕게 아래로 뾰족하게 내려온 배너/네임플레이트 모양입니다. 세로로 긴 방패나 문장(crest), 원형, 다이아몬드 형태가 아닙니다. 검정 바탕에 같은 윤곽을 따라가는 가는 흰 테두리, 그 안에 흰색 볼드 대문자 산세리프로 DUVETICA를 판 폭에 꽉 차게 넣으세요. 딱 한 번만, 작고 정확한 비율로 배치하세요(어두운 원단에는 톤온톤 블랙 온 블랙 가능). 이 가슴 배지가 유일한 브랜딩입니다 — 지퍼나 절개선의 로고 테이프, 드로스트링·지퍼풀·소매·밑단의 레터링 등 반복 워드마크는 넣지 마세요. 입력 레퍼런스나 CAD에 다른 브랜드의 로고·워드마크·모노그램·시그니처 패턴(예: LV·Dior·Prada·Miu Miu·Gucci·Moncler 등)이 보이면 전부 지우고 DUVETICA 배지만 남기세요. 타 브랜드 로고·시그니처는 절대 넣지 마세요. ';
   return `${b} 브랜드 아이덴티티에 맞게 로고/라벨은 톤온톤으로 은은하게(제품에 원래 있는 위치·형태로만) 처리하세요. 입력 레퍼런스나 CAD에 다른 브랜드의 로고·워드마크·모노그램·시그니처 패턴이 보이면 전부 지우세요. ${b} 외 타 브랜드 로고·시그니처는 절대 넣지 마세요. `;
 }
 const LOGO_RULE='MLB의 기존 로고를 반드시 반영하세요 — MLB NY 마크 또는 MLB 마크. 입력한 레퍼런스나 CAD에 다른 브랜드의 로고·워드마크·모노그램·시그니처 패턴(예: LV·Dior·Prada·Miu Miu 등)이 보이면 전부 지우고 MLB 로고만 남기세요. 타 브랜드 로고·시그니처는 결과물에 절대 넣지 마세요. ';
@@ -2596,7 +2621,7 @@ window.genNewCard=async(key,subEnc,gid,mode)=>{
     :'Premium quiet-luxury styling, minimal and refined coordination, timeless elegant pieces, understated tailoring, sophisticated grown-up mood — do NOT over-style or make it look too young or too busy.';
   const brandLogoLine=isMLB
     ?'The outfit prominently features an MLB NY logo embroidered or printed on the clothing.'
-    :'BRAND MARK (required): the garment carries the DUVETICA badge on the upper-left chest. SHAPE: a WIDE HORIZONTAL plaque, landscape orientation roughly 3:1 (about three times wider than tall) — a rounded rectangle whose BOTTOM EDGE steps down to a shallow point at the centre, like a flat banner or nameplate. It is NOT a vertical shield, NOT a crest, NOT a circle, NOT a diamond. STYLE: solid black ground with a thin white inner outline following the same outline shape, and the single word DUVETICA in white bold uppercase sans-serif filling the width of the plaque. Place it once only, small and correctly proportioned, upper-left chest height (tone-on-tone black-on-black is acceptable on dark fabrics). No other brand logos, monograms or signature patterns anywhere.';
+    :'BRAND MARK (required): the garment carries the DUVETICA badge on the upper-left chest. SHAPE: a WIDE HORIZONTAL plaque, landscape orientation roughly 3:1 (about three times wider than tall) — a rounded rectangle whose BOTTOM EDGE steps down to a shallow point at the centre, like a flat banner or nameplate. It is NOT a vertical shield, NOT a crest, NOT a circle, NOT a diamond. STYLE: solid black ground with a thin white inner outline following the same outline shape, and the single word DUVETICA in white bold uppercase sans-serif filling the width of the plaque. Place it once only, small and correctly proportioned, upper-left chest height (tone-on-tone black-on-black is acceptable on dark fabrics). This chest badge is the ONLY branding on the garment — no logo tape along the zip or seams, no lettering on drawcords, zip pulls, cuffs, hem or sleeves, no repeated wordmarks anywhere. No other brand logos, monograms or signature patterns anywhere.';
   // ===== 레퍼에서 디자인 포인트 키워드 추출 → 메인바디 + 몇 개만 조합(복제 아님) =====
   const gmodels=[...new Set(g.refs.map(r=>r.model).filter(Boolean))].slice(0,40);
   let axList=[];
@@ -2629,9 +2654,13 @@ window.genNewCard=async(key,subEnc,gid,mode)=>{
   const tagNonQuilt=/NON-?QUILTED/.test(subU);
   const tagQuilt=/(^|·|\s)QUILTED/.test(subU)&&!tagNonQuilt;
   const isQuilted=tagNonQuilt?false:(tagQuilt?true:/QUILT|PUFFER|PADD|DOWN|채널|다이아/i.test(sub+' '+surfTxt));
-  const quiltPatterns=['diamond quilting','horizontal channel quilting','wavy onde-style quilting','box quilting'];
+  // 'REF' = 레퍼런스 퀼팅을 그대로 계승 / 나머지는 새 패턴 제안 — 카드마다 번갈아 섞임
+  const quiltPatterns=['REF','diamond quilting','REF','horizontal channel quilting','wavy onde-style quilting','REF','box quilting','vertical channel quilting'];
   const smoothLine=tagNonQuilt?' SURFACE CONSTRUCTION: NON-QUILTED — the outer face must be completely smooth with NO visible stitch lines, channels or baffles anywhere (chambers hidden inside). Do not add any quilting pattern.':'';
-  const quiltLine=isQuilted?` Quilting: base it on the attached reference, and this time render it as ${quiltPatterns[idx%quiltPatterns.length]}. Match the stitch spacing/scale of the reference — if the reference quilting is small and tight keep it small and tight, if it is wide keep the panels wide.`:'';
+  const _qp=quiltPatterns[idx%quiltPatterns.length];
+  const quiltLine=isQuilted?(_qp==='REF'
+    ? ` Quilting: KEEP THE QUILTING OF THE ATTACHED REFERENCE — reproduce its pattern geometry as-is (same pattern type, same stitch direction, same panel proportions and spacing). Do not substitute a different quilting style; carry the reference's own quilting onto the new silhouette.`
+    : ` Quilting: base it on the attached reference, and this time render it as ${_qp}. Match the stitch spacing/scale of the reference — if the reference quilting is small and tight keep it small and tight, if it is wide keep the panels wide.`):'';
   // 기장 판정: 미드 기장 이상에서만 벨트·웨이스트 셔링 고려(숏/크롭은 제외)
   const lenTxt=(axList.map(a=>String(a.length||'')).join(' ')+' '+sub).toUpperCase();
   const isShortLen=/CROP|CROPPED|SHORT|HIP|숏|크롭/.test(lenTxt);
@@ -2664,8 +2693,8 @@ window.genNewCard=async(key,subEnc,gid,mode)=>{
   if(hasStrap) pool.push('a chest strap detail (only if the reference actually has one)');   // 레퍼에 있을 때만, 뜬금없는 가슴벨트 금지
   if(hasDblPkt) pool.push('two front patch pockets');
   if(!isMLB){
-    pool.push('DUVETICA logo tape running along the front zip / side slit');
-    pool.push('thick DUVETICA grosgrain drawstrings at the hood/hem');
+    // 로고 테이프/로고 드로스트링 제외 — 브랜딩은 가슴 배지 하나로 통일
+    pool.push('thick plain grosgrain drawstrings at the hood/hem (no lettering)');
   }
   // 벨트: 레퍼가 벨트형이면 항상 반영(미드기장 이상 & LUX ACTIVE 아님) — 랜덤 풀이 아닌 강제
   const forcedPts=[];
@@ -2871,12 +2900,13 @@ window.genFitting=async(gid,ci,key,subEnc)=>{
   if(msg)msg.textContent='피팅컷 생성 중…';
   try{
     const genImg=src.genImg||src.url;                 // 생성된 제품샷(IMAGE1) → 모델에 착장. 슈즈는 모델룩(IMAGE2)도 함께
-    const inputs=[genImg,...(src.fitInputs||[]),...FACE_REFS].filter(Boolean);
+    const _useFace=(CUR_BRAND!=='MLB')&&FACE_REFS.length;
+    const inputs=[genImg,...(src.fitInputs||[]),...(_useFace?FACE_REFS:[])].filter(Boolean);
     let fp=src.fitPrompt;
     if(fp&&fp.indexOf('{{POSE}}')>=0){   // 옷 피팅컷: 생성마다 포즈·코디 랜덤(얼굴/모델은 그대로)
       const _isDV=(CUR_BRAND!=='MLB');
       fp=fp.replace('{{POSE}}',_isDV?DV_POSE:pick(FIT_POSES)).replace('{{COORD}}',_isDV?DV_COORD:pick(src.fitCoords||FIT_COORDS_STREET));
-      if(FACE_REFS.length)fp='MODEL IDENTITY (fixed): the FIRST attached image is the GARMENT to be worn. Every image after it is a REFERENCE PHOTO OF THE HOUSE MODEL. Reproduce that same woman exactly — same face and facial proportions, same hair colour, length and styling, same skin tone, same body proportions and height. She is the fixed house model used for every look; never invent a different person, never blend in other faces, and do not copy the clothing from the model reference photos. Only the garment from the first image changes. '+fp;
+      if(_useFace)fp='MODEL IDENTITY (fixed): the FIRST attached image is the GARMENT to be worn. Every image after it is a REFERENCE PHOTO OF THE HOUSE MODEL. Reproduce that same woman exactly — same face and facial proportions, same hair colour, length and styling, same skin tone, same body proportions and height. She is the fixed house model used for every look; never invent a different person, never blend in other faces, and do not copy the clothing from the model reference photos. Only the garment from the first image changes. '+fp;
     }
     const url=await realImage(inputs,fp);
     const nci=st.cands.length;

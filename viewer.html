@@ -37,7 +37,7 @@ h3{font-size:16px;font-weight:700;margin:0 0 6px}
 .mc.hd{background:#faf6f5;color:var(--coral2);text-align:center;font-weight:700;cursor:default;border-color:#f2d7d9}
 .mc b{font-size:17px;font-weight:800}
 .grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
-.ph{width:100%;height:120px;object-fit:cover;object-position:center bottom;border-radius:8px;background:#f4f1ef}
+.ph{width:100%;height:130px;object-fit:contain;object-position:center;border-radius:8px;background:#f4f1ef}
 body[data-outer="1"] .ph{height:200px;object-fit:contain}
 body[data-outer="1"] .sc .rep{height:280px}
 body[data-outer="1"] .sc .rep img{object-fit:contain}
@@ -187,8 +187,79 @@ async function pickProject(pj){
   $('#hUpd').textContent=`${snap?('승인 '+(snap.approved_at?new Date(snap.approved_at).toLocaleString():'—')):'승인된 매트릭스 없음'} · 마지막 갱신 ${new Date().toLocaleTimeString()}`;
   render();
 }
+function imgFallback(el){
+  if(!el||el.dataset.fb)return;           // 1회만 재시도
+  el.dataset.fb='1';
+  const u=el.getAttribute('src')||'';
+  if(!u||/^data:/.test(u)||/wsrv\.nl/.test(u)){el.style.opacity=.2;return;}
+  el.onerror=function(){this.style.opacity=.2;this.onerror=null;};
+  el.src='https://wsrv.nl/?url='+encodeURIComponent(u.replace(/^https?:\/\//,''))+'&w=400&output=webp';
+}
 function imgFor(r){return (r.model&&DATA.imgMap[r.model])||r.img||'';}
 
+let LIFE_DATA={};
+let EDIT_ON={};
+function lifeKeyStore(lk){return 'mx_look_'+((DATA&&DATA.snap&&DATA.snap.id)?DATA.snap.id:'x')+'_'+lk;}
+function loadLifeState(lk){try{return JSON.parse(localStorage.getItem(lifeKeyStore(lk)))||null;}catch(e){return null;}}
+function saveLifeState(lk,st){try{localStorage.setItem(lifeKeyStore(lk),JSON.stringify(st));}catch(e){}}
+function lifeState(lk){
+  const d=LIFE_DATA[lk]; if(!d)return {on:[],main:null,off:[]};
+  const all=d.items.map(x=>x.img);
+  let st=loadLifeState(lk);
+  if(!st||!Array.isArray(st.on))st={on:all.slice(),off:[],main:all[0]||null};
+  st.off=st.off||[];
+  st.on=st.on.filter(u=>all.includes(u));
+  all.forEach(u=>{if(!st.on.includes(u)&&!st.off.includes(u))st.on.push(u);});
+  if(!st.main||!st.on.includes(st.main))st.main=st.on[0]||null;
+  return st;
+}
+function lifeCell(lk,u,big){
+  const d=LIFE_DATA[lk]; const it=(d.items.find(x=>x.img===u))||{sub:''}; const editing=!!EDIT_ON[lk];
+  return `<div style="position:relative">
+    <div style="width:100%;aspect-ratio:3/4;background:#f4f1ef;border-radius:8px;overflow:hidden;border:1px solid var(--line);cursor:zoom-in" onclick="hoverPrev('${esc(u)}')">
+      <img src="${esc(u)}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.parentNode.style.opacity=.3"></div>
+    <div class="small" style="margin-top:4px;color:var(--sub);display:flex;justify-content:space-between;gap:6px;align-items:center">
+      <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(it.sub||'')}</span>
+      <a href="${esc(u)}" onclick="dlImg('${esc(u)}','${esc(d.life)}.jpg');return false;" title="이미지 다운로드" style="color:var(--coral2);font-weight:700;text-decoration:none;flex:0 0 auto">⬇</a>
+    </div>
+    ${editing?`<button title="빼기" onclick="event.stopPropagation();lookOff('${lk}','${esc(u)}')" style="position:absolute;top:5px;right:5px;background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:6px;padding:1px 7px;font-size:12px;cursor:pointer">×</button>`+(big?'':`<button title="대표컷으로" onclick="event.stopPropagation();lookMain('${lk}','${esc(u)}')" style="position:absolute;top:5px;left:5px;background:rgba(0,0,0,.6);color:#ffd76a;border:0;border-radius:6px;padding:1px 7px;font-size:12px;cursor:pointer">★</button>`):''}
+  </div>`;
+}
+function drawLife(lk){
+  const d=LIFE_DATA[lk]; if(!d)return;
+  const st=lifeState(lk); const on=st.on.slice(); const main=st.main;
+  const stage=document.querySelector('[data-stage="'+lk+'"]'); if(!stage)return;
+  const cnt=document.querySelector('[data-cnt="'+lk+'"]'); if(cnt)cnt.textContent=on.length;
+  let html='';
+  if(!on.length)html='<div class="empty">표시할 착장이 없습니다. 아래 목록에서 다시 넣어주세요.</div>';
+  else{
+    const rest=on.filter(u=>u!==main), head=rest.slice(0,6), tail=rest.slice(6);
+    html='<div style="display:flex;gap:12px;align-items:flex-start"><div style="flex:0 0 42%">'+lifeCell(lk,main,true)+'</div>'
+      +'<div style="flex:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">'+head.map(u=>lifeCell(lk,u,false)).join('')+'</div></div>';
+    if(tail.length)html+='<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px">'+tail.map(u=>lifeCell(lk,u,false)).join('')+'</div>';
+  }
+  stage.innerHTML=html;
+  const pool=document.querySelector('[data-pool="'+lk+'"]');
+  const off=d.items.map(x=>x.img).filter(u=>!on.includes(u));
+  if(pool){
+    if(EDIT_ON[lk]&&off.length){
+      pool.style.display='';
+      pool.innerHTML='<div class="small" style="margin-bottom:6px;color:var(--sub)">뺀 사진 ('+off.length+') — 누르면 다시 들어갑니다</div>'
+        +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px">'
+        +off.map(u=>'<div onclick="lookOn(\''+lk+'\',\''+esc(u)+'\')" style="cursor:pointer;opacity:.55"><div style="width:100%;aspect-ratio:3/4;background:#f4f1ef;border-radius:6px;overflow:hidden;border:1px dashed var(--line)"><img src="'+esc(u)+'" loading="lazy" style="width:100%;height:100%;object-fit:cover"></div></div>').join('')+'</div>';
+    } else { pool.style.display='none'; pool.innerHTML=''; }
+  }
+}
+function toggleEdit(lk,btn){
+  EDIT_ON[lk]=!EDIT_ON[lk];
+  if(btn)btn.textContent=EDIT_ON[lk]?'편집 끝':'사진 편집';
+  const hint=document.querySelector('[data-edithint="'+lk+'"]'); if(hint)hint.style.display=EDIT_ON[lk]?'':'none';
+  drawLife(lk);
+}
+function lookOff(lk,u){const st=lifeState(lk);st.on=st.on.filter(x=>x!==u);st.off=(st.off||[]).concat([u]);if(st.main===u)st.main=st.on[0]||null;saveLifeState(lk,st);drawLife(lk);}
+function lookOn(lk,u){const st=lifeState(lk);if(!st.on.includes(u))st.on.push(u);st.off=(st.off||[]).filter(x=>x!==u);if(!st.main)st.main=u;saveLifeState(lk,st);drawLife(lk);}
+function lookMain(lk,u){const st=lifeState(lk);st.main=u;saveLifeState(lk,st);drawLife(lk);}
+function drawAllLives(){Object.keys(LIFE_DATA).forEach(drawLife);}
 function render(){
   const {comp,cells,props,trends,macros}=DATA;
   const hasSnap=Object.keys(cells).length>0;
@@ -325,45 +396,18 @@ function render(){
   if(!lifes.length){
     h+=`<div class="card"><div class="empty">사람 착용(피팅컷) 스타일 이미지가 아직 없습니다. 관리자가 04에서 피팅컷을 생성·확정하고 승인하면 여기에 라이프스타일별로 표시됩니다.</div></div>`;
   } else {
-    lifes.forEach((life,li)=>{ const arr=shots[life]; const FIRST=6; const moreId='more_'+li;
-      h+=`<div class="card"><div style="font-weight:800;font-size:16px;margin-bottom:10px">${esc(life)} <span class="small" style="opacity:.6">· ${arr.length}착장</span></div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
-          ${arr.map((s,i)=>`<div style="display:${i<FIRST?'block':'none'}" data-more="${moreId}">
-            <div style="position:relative;width:100%;aspect-ratio:3/4;background:#f4f1ef;border-radius:8px;overflow:hidden;border:1px solid var(--line);cursor:zoom-in" onclick="hoverPrev('${esc(s.img)}')">
-              <img src="${esc(s.img)}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.parentNode.style.opacity=.3">
-              <button onclick="event.stopPropagation();hoverPrev('${esc(s.img)}')" title="크게 보기" style="position:absolute;top:5px;right:5px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:6px;padding:2px 7px;font-size:12px;cursor:pointer">🔍</button></div>
-            <div class="small" style="margin-top:4px;color:var(--sub);display:flex;justify-content:space-between;gap:6px;align-items:center">
-              <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.sub||'')}</span>
-              <a href="${esc(s.img)}" onclick="dlImg('${esc(s.img)}','${esc(life)}_${i+1}.jpg');return false;" title="이미지 다운로드" style="color:var(--coral2);font-weight:700;text-decoration:none;flex:0 0 auto">⬇</a>
-            </div>
-          </div>`).join('')}
-        </div>
-        ${arr.length>FIRST?`<div style="text-align:center;margin-top:10px"><button class="btn" onclick="showMore('${moreId}',this)">더보기 (+${arr.length-FIRST})</button></div>`:''}
+    lifes.forEach((life,li)=>{
+      const arr=shots[life];
+      const lk='life'+li;
+      h+=`<div class="card" data-lifeblock="${lk}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <div style="font-weight:800;font-size:16px">${esc(life)} <span class="small" style="opacity:.6">· <span data-cnt="${lk}">${arr.length}</span>착장</span></div>
+        <button class="btn" style="padding:2px 10px;font-size:12px" onclick="toggleEdit('${lk}',this)">사진 편집</button>
+        <span class="small" data-edithint="${lk}" style="display:none;color:var(--sub)">사진 위 ★ = 대표컷으로, × = 빼기 · 뺀 사진은 아래 목록에서 다시 넣기</span>
+      </div>
+      <div data-stage="${lk}"></div>
+      <div data-pool="${lk}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)"></div>
       </div>`;
-    });
-  }
-  // ⑥ CAD 도면 — 라이프스타일별 접이식(기본 접힘, 누르면 펼침)
-  const cadShots={};
-  props.forEach(p=>{const life=p.lifestyle||'기타'; const ci=p.points&&p.points.cad_image; const sub=p.subcategory||(p.points&&p.points.subcategory)||'';
-    if(ci){ (cadShots[life]=cadShots[life]||[]); if(!cadShots[life].some(x=>x.img===ci)) cadShots[life].push({img:ci,sub}); }});
-  const cadLifes=Object.keys(cadShots).sort((a,b)=>{const ia=LORDER.indexOf(a),ib=LORDER.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
-  if(cadLifes.length){
-    h+=`<div class="sec-h"><span class="n">06</span><h2>CAD 도면 — 라이프스타일별</h2></div>`;
-    cadLifes.forEach((life,li)=>{ const arr=cadShots[life]; const cid='cadfold_'+li;
-      h+=`<div class="card">
-        <button class="btn" style="width:100%;text-align:left;font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px" onclick="toggleFold('${cid}',this)">
-          <span class="fold-arrow">▸</span> ${esc(life)} <span class="small" style="opacity:.6;font-weight:400">· CAD ${arr.length}</span></button>
-        <div id="${cid}" style="display:none;margin-top:10px">
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px">
-            ${arr.map(c=>`<div>
-              <div style="position:relative;width:100%;aspect-ratio:3/4;background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;cursor:zoom-in" onclick="hoverPrev('${esc(c.img)}')">
-                <img src="${esc(c.img)}" loading="lazy" style="width:100%;height:100%;object-fit:contain" onerror="this.parentNode.style.opacity=.3">
-                <button onclick="event.stopPropagation();hoverPrev('${esc(c.img)}')" title="크게 보기" style="position:absolute;top:5px;right:5px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:6px;padding:2px 7px;font-size:12px;cursor:pointer">🔍</button></div>
-              ${c.sub?`<div class="small" style="margin-top:4px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.sub)}</div>`:''}
-            </div>`).join('')}
-          </div>
-        </div>
-      </div>`;
+      LIFE_DATA[lk]={life:life,items:arr.map((s2,i)=>({img:s2.img,sub:s2.sub||'',idx:i}))};
     });
   }
   // ⑦ 제품컷 — 맨 아래 "제품컷 보기"로 펼치면 제품샷이 쭉(라이프별)
@@ -375,7 +419,7 @@ function render(){
   const prodLifes=Object.keys(prodShots).sort((a,b)=>{const ia=LORDER.indexOf(a),ib=LORDER.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
   if(prodLifes.length){
     const totalP=prodLifes.reduce((s,l)=>s+prodShots[l].length,0);
-    h+=`<div class="sec-h"><span class="n">07</span><h2>제품컷</h2></div>`;
+    h+=`<div class="sec-h"><span class="n">06</span><h2>제품컷</h2></div>`;
     h+=`<div class="card">
       <button class="btn" style="width:100%;text-align:left;font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px" onclick="toggleFold('prodfold',this)">
         <span class="fold-arrow">▸</span> 제품컷 보기 <span class="small" style="opacity:.6;font-weight:400">· 총 ${totalP}컷</span></button>
@@ -399,6 +443,8 @@ function render(){
   }
   h+=`</div>`;
   $('#body').innerHTML=h;
+  try{drawAllLives();}catch(e){}
+  try{drawAllLives();}catch(e){}
   if(openCell&&DATA.cells[openCell])showCell(openCell,true);
 }
 window.toggleFold=(id,btn)=>{const el=document.getElementById(id);if(!el)return;const open=el.style.display==='none';el.style.display=open?'block':'none';const a=btn&&btn.querySelector('.fold-arrow');if(a)a.textContent=open?'▾':'▸';};
@@ -469,7 +515,7 @@ function styleCard(p){
       </div></div>`:''}
   </div>`;
 }
-function refThumb(r){const im=imgFor(r);return `<div><img class="ph" src="${esc(im)}" loading="lazy" onerror="this.style.opacity=.2"><div class="small" style="max-height:14px;overflow:hidden">${esc(r.brand||'')}</div></div>`;}
+function refThumb(r){const im=imgFor(r);return `<div><img class="ph" src="${esc(im)}" loading="lazy" onerror="imgFallback(this)"><div class="small" style="max-height:14px;overflow:hidden">${esc(r.brand||'')}</div></div>`;}
 
 window.showCell=(key,keep)=>{
   openCell=key; const c=DATA.cells[key]; if(!c)return;
@@ -487,7 +533,7 @@ window.showCell=(key,keep)=>{
   // 그룹 박스 1개 렌더 (small=1~2모델용 압축 배치)
   const gBox=(sub,rs,small)=>`<div style="border:1px solid var(--line);border-radius:9px;padding:10px;background:#fcfbf8${small?'':';margin-bottom:10px'}">
     <div style="font-weight:700;margin-bottom:6px;font-size:${small?'13px':'inherit'}">${esc(sub)} <span class="small">· ${rs.length}모델</span></div>
-    <div style="display:grid;grid-template-columns:repeat(${small?2:6},minmax(0,1fr));gap:8px">${rs.slice(0,12).map(r=>{const im=imgFor(r);return `<div><img class="ph" src="${esc(im)}" loading="lazy" onerror="this.style.opacity=.2"><div class="small" style="max-height:14px;overflow:hidden">${esc(r.brand||'')}</div></div>`;}).join('')}</div></div>`;
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px">${rs.slice(0,12).map(r=>{const im=imgFor(r);return `<div><img class="ph" src="${esc(im)}" loading="lazy" onerror="imgFallback(this)"><div class="small" style="max-height:14px;overflow:hidden">${esc(r.brand||'')}</div></div>`;}).join('')}</div></div>`;
   // 3모델 이상은 기존처럼 한 줄 전체, 1~2모델짜리는 모아서 한 줄에 최대 3그룹
   const bigG=gl.filter(([,rs])=>rs.length>=3), smallG=gl.filter(([,rs])=>rs.length<3);
   let gh=bigG.map(([sub,rs])=>gBox(sub,rs,false)).join('');
