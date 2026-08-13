@@ -154,12 +154,18 @@ async function reloadAll(){
   const S2P={}; (srcs||[]).forEach(s=>{S2P[s.id]=s.project||'MLB|SHOES';});
   window._S2P=S2P; window._trendsRaw=trendsRaw;
   // 프로젝트별 최신 승인본 1개씩(같은 27FW라도 MLB/DUVETICA 섞이지 않게)
-  const perProj={}; (snaps||[]).forEach(s=>{const pj=s.project||(s.computed&&s.computed.project)||'MLB|SHOES'; if(!perProj[pj])perProj[pj]=s;});
+  // 프로젝트 + 기획시즌 조합별 최신 승인본 1개씩 (27FW / 27SS 가 따로 뜨게)
+  const perProj={}; (snaps||[]).forEach(s=>{
+    const pj=s.project||(s.computed&&s.computed.project)||'MLB|SHOES';
+    const ss=s.planning_season||(s.computed&&s.computed.season)||'';
+    const key=ss?(pj+'|'+ss):pj;
+    if(!perProj[key])perProj[key]=s;
+  });
   window.PROJ_SNAPS=perProj;
   window._prodImgMap=imgMap;
   const projKeys=Object.keys(perProj);
   const psel=document.getElementById('projSel');
-  if(projKeys.length>1){ psel.style.display=''; psel.innerHTML=projKeys.map(k=>`<option value="${k}">${k.replace('|',' › ')}</option>`).join(''); }
+  if(projKeys.length>1){ psel.style.display=''; psel.innerHTML=projKeys.map(k=>`<option value="${esc(k)}">${esc(k.split('|').join(' › '))}</option>`).join(''); }
   await pickProject(projKeys[0]||'MLB|SHOES');
   return;
 }
@@ -169,13 +175,15 @@ async function pickProject(pj){
   if(snap) props=await sel('style_proposals','snapshot_id=eq.'+snap.id+'&select=*&order=line.asc,rank.asc');
   const imgMap=window._prodImgMap||{};
   // 트렌드도 현재 프로젝트 것만. 우선 트렌드 자체의 project, 없으면 소스 project, 그것도 없으면 MLB|SHOES.
-  const S2P=window._S2P||{}, raw=(window._trendsRaw||[]).filter(t=>(t.project||(t.source_id&&S2P[t.source_id])||'MLB|SHOES')===pj);
+  const _pjBase=String(pj).split('|').slice(0,2).join('|');
+  const S2P=window._S2P||{}, raw=(window._trendsRaw||[]).filter(t=>(t.project||(t.source_id&&S2P[t.source_id])||'MLB|SHOES')===_pjBase);
   const macros=raw.filter(t=>t.coverage_group==='MACRO');
   const kwmapRow=raw.find(t=>t.coverage_group==='KWMAP');
   window.KWKO=Object.assign({},KW_KO); if(kwmapRow){try{const m=JSON.parse(kwmapRow.summary_ko||'{}');Object.assign(window.KWKO,m.ko||{});}catch(_){}}
   const trends=raw.filter(t=>t.coverage_group!=='MACRO'&&t.coverage_group!=='KWMAP');
   DATA={snap,comp,cells,props,imgMap,trends,macros};
-  const brand=comp.brand||(pj.split('|')[0]), cat=comp.category||(pj.split('|')[1]||'');
+  const _pp=String(pj).split('|');
+  const brand=comp.brand||_pp[0], cat=comp.category||(_pp[1]||'');
   const isOuter=String(cat).toUpperCase()!=='SHOES';
   document.body.dataset.outer=isOuter?'1':'';
   $('#hTitle').textContent=`${brand} ${cat} · ${snap?.planning_season||comp.season||''} 시즌기획 리포트`;
