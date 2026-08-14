@@ -53,7 +53,7 @@ progress{width:100%;height:8px}
 </head>
 <body>
 <header>
-  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-171</span></h1>
+  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-172</span></h1>
   <div id="scopeBar" class="hide" style="display:flex;gap:6px;align-items:center;margin-left:16px">
     <select id="selBrand" style="padding:4px 6px;font-size:12px"></select>
     <span style="opacity:.4">›</span>
@@ -3246,10 +3246,10 @@ function drawRptLifes(){
               ${[0,1,2].map(i=>rptSlot(life,si,'prod',i,(S.prods||[])[i])).join('')}
             </div>
           </div>
-          <div class="small" style="margin:6px 0 3px;color:var(--sub)">참고 카드</div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">
-            ${[0,1,2].map(i=>rptSlot(life,si,'ref',i,(S.refs||[])[i])).join('')}
-          </div>
+          <input data-stitle="${esc(life)}" data-si="${si}" value="${esc(S.title||'')}" placeholder="컨셉명 (예: ALMOND FADE)"
+            style="width:100%;margin-top:8px;font-size:12px;font-weight:700;padding:4px 6px">
+          <textarea data-sdesc="${esc(life)}" data-si="${si}" placeholder="한 줄 설명 — 어떤 트렌드를 반영했는지"
+            style="width:100%;margin-top:5px;font-size:11.5px;padding:4px 6px;height:44px;resize:vertical">${esc(S.desc||'')}</textarea>
         </div>`).join('')}
       </div></div>`;
   }).join('');
@@ -3310,6 +3310,14 @@ document.addEventListener('click',async e=>{
   inp.onchange=async()=>{ if(inp.files&&inp.files[0]){ const url=await rptUpload(inp.files[0]); if(url)rptFill(life,si,kind,pi,url); } };
   inp.click();
 });
+document.addEventListener('input',e=>{
+  const t=e.target.getAttribute&&e.target.getAttribute('data-stitle');
+  const d=e.target.getAttribute&&e.target.getAttribute('data-sdesc');
+  if(!t&&!d)return;
+  const life=t||d, si=+e.target.getAttribute('data-si');
+  const S=rptSet(life,si);
+  if(t)S.title=e.target.value; else S.desc=e.target.value;
+});
 async function rptUpload(f){
   const st=$('#rptStat'); st.textContent='업로드 중…';
   try{
@@ -3345,12 +3353,12 @@ $('#btnRptExport').onclick=async()=>{
     }catch(e){ res(null); } };
     im.onerror=()=>res(null); im.src=url;
   });
-  const lifes=rptLifes().filter(l=>(RPT.sets[l]||[]).some(S=>S.look||(S.prods||[]).filter(Boolean).length||(S.refs||[]).filter(Boolean).length));
+  const lifes=rptLifes().filter(l=>(RPT.sets[l]||[]).some(S=>S.look||(S.prods||[]).filter(Boolean).length||false));
   const cache={}; let n=0, tot=0;
-  lifes.forEach(l=>(RPT.sets[l]||[]).forEach(S=>{ tot+=1+(S.prods||[]).filter(Boolean).length+(S.refs||[]).filter(Boolean).length; }));
+  lifes.forEach(l=>(RPT.sets[l]||[]).forEach(S=>{ tot+=1+(S.prods||[]).filter(Boolean).length; }));
   for(const life of lifes)for(const S of (RPT.sets[life]||[])){
     if(S.look&&!cache[S.look]){ cache[S.look]=await shrink(S.look,1100)||S.look; st.textContent=`이미지 ${++n}/${tot}…`; }
-    for(const u of [...(S.prods||[]),...(S.refs||[])]) if(u&&!cache[u]){ cache[u]=await shrink(u,520)||u; st.textContent=`이미지 ${++n}/${tot}…`; }
+    for(const u of (S.prods||[])) if(u&&!cache[u]){ cache[u]=await shrink(u,520)||u; st.textContent=`이미지 ${++n}/${tot}…`; }
   }
   // 트렌드 요약
   const arts=RPT.trend.filter(t=>t.coverage_group!=='MACRO');
@@ -3387,10 +3395,8 @@ $('#btnRptExport').onclick=async()=>{
   .prods{display:flex;flex-direction:column;gap:10px}
   .prod{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#FAFAFB;aspect-ratio:4/3}
   .prod img{width:100%;height:100%;object-fit:contain;display:block}
-  .reflabel{margin:12px 0 6px;font-size:11.5px;font-weight:800;color:var(--sub);letter-spacing:.5px}
-  .refs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-  .ref{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#FAFAFB;aspect-ratio:5/4}
-  .ref img{width:100%;height:100%;object-fit:contain;display:block}
+  .set-title{margin:12px 0 4px;font-size:15px;font-weight:800;letter-spacing:-.2px}
+  .set-desc{font-size:13px;color:var(--sub);line-height:1.45}
   @media(max-width:900px){.wrap{padding:0 18px}.sets{grid-template-columns:1fr}.hero h1{font-size:28px}}
   @media print{section{break-inside:avoid}.set{break-inside:avoid}}`;
 
@@ -3418,14 +3424,14 @@ $('#btnRptExport').onclick=async()=>{
       <div class="sec-badge">${String(li+3).padStart(2,'0')} STYLE</div><h2>${esc(life)}</h2>
       <p class="sub">착장 1 + 제품 3 + 참고 3</p>
       <div class="sets">
-      ${(RPT.sets[life]||[]).filter(S=>S.look||(S.prods||[]).filter(Boolean).length||(S.refs||[]).filter(Boolean).length).map(S=>`
+      ${(RPT.sets[life]||[]).filter(S=>S.look||(S.prods||[]).filter(Boolean).length||S.title).map(S=>`
         <div class="set">
           <div class="set-top">
             <div class="look">${S.look?`<img src="${cache[S.look]}">`:''}</div>
             <div class="prods">${[0,1,2].map(i=>{const u=(S.prods||[])[i];return `<div class="prod">${u?`<img src="${cache[u]}">`:''}</div>`;}).join('')}</div>
           </div>
-          ${(S.refs||[]).filter(Boolean).length?`<div class="reflabel">REFERENCE</div>
-          <div class="refs">${[0,1,2].map(i=>{const u=(S.refs||[])[i];return `<div class="ref">${u?`<img src="${cache[u]}">`:''}</div>`;}).join('')}</div>`:''}
+          ${S.title?`<div class="set-title">${esc(S.title)}</div>`:''}
+          ${S.desc?`<div class="set-desc">${esc(S.desc)}</div>`:''}
         </div>`).join('')}
       </div></div></section>`).join('')}`;
 
