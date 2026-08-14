@@ -250,48 +250,112 @@ function lifeState(lk){
   if(!st.main||!st.on.includes(st.main))st.main=st.on[0]||null;
   return st;
 }
-function lifeCell(lk,u,big){
-  const d=LIFE_DATA[lk]; const it=(d.items.find(x=>x.img===u))||{sub:''}; const editing=!!EDIT_ON[lk];
-  return `<div style="position:relative" data-cell="${esc(u)}" data-lk="${lk}" draggable="${editing}">
-    <div style="width:100%;aspect-ratio:3/4;background:#f4f1ef;border-radius:8px;overflow:hidden;border:1px solid var(--line);cursor:zoom-in" onclick="hoverPrev('${esc(u)}')">
-      <img src="${esc(u)}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.parentNode.style.opacity=.3"></div>
-    <div class="small" style="margin-top:4px;color:var(--sub);display:flex;justify-content:space-between;gap:6px;align-items:center">
-      <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(it.sub||'')}</span>
-      <a href="${esc(u)}" onclick="dlImg('${esc(u)}','${esc(d.life)}.jpg');return false;" title="이미지 다운로드" style="color:var(--coral2);font-weight:700;text-decoration:none;flex:0 0 auto">⬇</a>
-    </div>
-    ${editing?`<button title="빼기" onclick="event.stopPropagation();lookOff('${lk}','${esc(u)}')" style="position:absolute;top:5px;right:5px;background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:6px;padding:1px 7px;font-size:12px;cursor:pointer">×</button>`+(big?'':`<button title="대표컷으로" onclick="event.stopPropagation();lookMain('${lk}','${esc(u)}')" style="position:absolute;top:5px;left:5px;background:rgba(0,0,0,.6);color:#ffd76a;border:0;border-radius:6px;padding:1px 7px;font-size:12px;cursor:pointer">★</button>`):''}
+/* ===== 카드 세트: 착장샷 1 + 제품샷 3, 한 줄에 2세트 ===== */
+function setsOf(lk){
+  const d=LIFE_DATA[lk]; if(!d)return [];
+  let st=loadLifeState(lk);
+  if(st&&Array.isArray(st.sets))return st.sets;
+  // 저장된 세트가 없으면 기존 이미지로 초기 세트 구성(착장 1 + 제품 3)
+  const looks=d.items.filter(x=>x.kind!=='제품샷').map(x=>x.img);
+  const prods=d.items.filter(x=>x.kind==='제품샷').map(x=>x.img);
+  const sets=[]; let pi=0;
+  looks.forEach(u=>{ sets.push({look:u,prods:prods.slice(pi,pi+3)}); pi+=3; });
+  while(pi<prods.length){ sets.push({look:null,prods:prods.slice(pi,pi+3)}); pi+=3; }
+  if(!sets.length)sets.push({look:null,prods:[]});
+  return sets;
+}
+function saveSets(lk,sets){
+  const st=loadLifeState(lk)||{};
+  st.sets=sets; saveLifeState(lk,st);
+}
+function slotHTML(lk,si,kind,pi,url,editing){
+  const big=(kind==='look');
+  const empty=!url;
+  return `<div data-slot="${kind}" data-si="${si}" data-pi="${pi==null?'':pi}" data-lk="${lk}"
+    ondragover="event.preventDefault();this.style.outline='2px dashed var(--coral2)'"
+    ondragleave="this.style.outline=''"
+    style="position:relative;border-radius:8px;overflow:hidden;border:1px ${empty?'dashed':'solid'} var(--line);background:#f4f1ef;${big?'aspect-ratio:3/4':'aspect-ratio:4/3'};display:flex;align-items:center;justify-content:center;cursor:${editing?'pointer':'zoom-in'}">
+    ${url?`<img src="${esc(url)}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="imgFallback(this)">`
+         :`<span class="small" style="color:var(--sub);text-align:center;padding:6px">${editing?(big?'착장샷<br>드래그':'제품샷<br>드래그'):'—'}</span>`}
+    ${(editing&&url)?`<button data-del="1" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:5px;font-size:11px;padding:1px 6px;cursor:pointer">×</button>`:''}
   </div>`;
 }
 function drawLife(lk){
   const d=LIFE_DATA[lk]; if(!d)return;
-  const st=lifeState(lk); const on=st.on.slice(); const main=st.main;
   const stage=document.querySelector('[data-stage="'+lk+'"]'); if(!stage)return;
-  const cnt=document.querySelector('[data-cnt="'+lk+'"]'); if(cnt)cnt.textContent=on.length;
-  let html='';
-  if(!on.length)html='<div class="empty">표시할 착장이 없습니다. 아래 목록에서 다시 넣어주세요.</div>';
-  else{
-    const rest=on.filter(u=>u!==main), head=rest.slice(0,6), tail=rest.slice(6);
-    html='<div style="display:flex;gap:12px;align-items:flex-start"><div style="flex:0 0 42%">'+lifeCell(lk,main,true)+'</div>'
-      +'<div style="flex:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">'+head.map(u=>lifeCell(lk,u,false)).join('')+'</div></div>';
-    if(tail.length)html+='<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px">'+tail.map(u=>lifeCell(lk,u,false)).join('')+'</div>';
-  }
-  stage.innerHTML=html;
+  const editing=!!EDIT_ON[lk];
+  const sets=setsOf(lk);
+  const cnt=document.querySelector('[data-cnt="'+lk+'"]'); if(cnt)cnt.textContent=sets.filter(s=>s.look||s.prods.length).length;
+  const setHTML=(S,si)=>`<div style="display:flex;gap:8px;border:1px solid var(--line);border-radius:10px;padding:8px;background:#fcfbf8">
+      <div style="flex:0 0 62%">${slotHTML(lk,si,'look',null,S.look,editing)}</div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+        ${[0,1,2].map(pi=>slotHTML(lk,si,'prod',pi,S.prods[pi]||null,editing)).join('')}
+      </div>
+    </div>`;
+  stage.innerHTML=`<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+      ${sets.map(setHTML).join('')}
+    </div>
+    ${editing?`<div style="margin-top:8px"><button class="btn" data-addset="${lk}" style="padding:3px 12px;font-size:12px">＋ 세트 추가</button>
+      <span class="small" style="color:var(--sub);margin-left:6px">빈 칸에 컴퓨터 사진을 끌어다 놓으면 채워집니다 · 칸을 클릭해도 선택 가능</span></div>`:''}`;
   const pool=document.querySelector('[data-pool="'+lk+'"]');
-  const off=d.items.map(x=>x.img).filter(u=>!on.includes(u));
-  if(pool){
-    if(EDIT_ON[lk]&&off.length){
-      pool.style.display='';
-      pool.innerHTML='<div class="small" style="margin-bottom:6px;color:var(--sub)">뺀 사진 ('+off.length+') — 누르면 다시 들어갑니다</div>'
-        +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px">'
-        +off.map(u=>'<div onclick="lookOn(\''+lk+'\',\''+esc(u)+'\')" style="cursor:pointer;opacity:.55"><div style="width:100%;aspect-ratio:3/4;background:#f4f1ef;border-radius:6px;overflow:hidden;border:1px dashed var(--line)"><img src="'+esc(u)+'" loading="lazy" style="width:100%;height:100%;object-fit:cover"></div></div>').join('')+'</div>';
-    } else { pool.style.display='none'; pool.innerHTML=''; }
-  }
+  if(pool){ pool.style.display='none'; pool.innerHTML=''; }
 }
+/* 드롭·클릭으로 슬롯 채우기 */
+function fillSlot(lk,si,kind,pi,url){
+  const sets=setsOf(lk);
+  while(sets.length<=si)sets.push({look:null,prods:[]});
+  if(kind==='look')sets[si].look=url;
+  else{ sets[si].prods=sets[si].prods||[]; sets[si].prods[pi]=url; }
+  saveSets(lk,sets); drawLife(lk);
+}
+function readFilesToSlot(lk,si,kind,pi,files){
+  const list=[...files].filter(f=>/^image\//.test(f.type));
+  if(!list.length)return;
+  let idx=(kind==='prod')?pi:0;
+  const d=LIFE_DATA[lk];
+  list.forEach((f,n)=>{
+    const r=new FileReader();
+    r.onload=()=>{
+      const url=r.result;
+      d.items.push({img:url,sub:'내 사진',mine:true,kind:kind==='look'?'피팅컷':'제품샷'});
+      if(kind==='look'&&n===0)fillSlot(lk,si,'look',null,url);
+      else if(kind==='prod'&&idx+n<3)fillSlot(lk,si,'prod',idx+n,url);
+      saveMine(lk,d);
+    };
+    r.readAsDataURL(f);
+  });
+}
+document.addEventListener('drop',e=>{
+  const sl=e.target.closest&&e.target.closest('[data-slot]');
+  if(!sl)return;
+  const lk=sl.getAttribute('data-lk'); if(!EDIT_ON[lk])return;
+  e.preventDefault(); sl.style.outline='';
+  const si=+sl.getAttribute('data-si'), kind=sl.getAttribute('data-slot');
+  const pi=sl.getAttribute('data-pi')===''?null:+sl.getAttribute('data-pi');
+  if(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files.length)readFilesToSlot(lk,si,kind,pi,e.dataTransfer.files);
+});
+document.addEventListener('click',e=>{
+  const del=e.target.getAttribute&&e.target.getAttribute('data-del');
+  const sl=e.target.closest&&e.target.closest('[data-slot]');
+  const add=e.target.getAttribute&&e.target.getAttribute('data-addset');
+  if(add){ const sets=setsOf(add); sets.push({look:null,prods:[]}); saveSets(add,sets); drawLife(add); return; }
+  if(!sl)return;
+  const lk=sl.getAttribute('data-lk');
+  const si=+sl.getAttribute('data-si'), kind=sl.getAttribute('data-slot');
+  const pi=sl.getAttribute('data-pi')===''?null:+sl.getAttribute('data-pi');
+  if(del){ e.stopPropagation(); fillSlot(lk,si,kind,pi,null); return; }
+  if(!EDIT_ON[lk]){ const im=sl.querySelector('img'); if(im)hoverPrev(im.getAttribute('src')); return; }
+  const inp=document.createElement('input');
+  inp.type='file'; inp.accept='image/*'; if(kind==='prod')inp.multiple=true;
+  inp.onchange=()=>{ if(inp.files&&inp.files.length)readFilesToSlot(lk,si,kind,pi,inp.files); };
+  inp.click();
+});
 function toggleEdit(lk,btn){
   EDIT_ON[lk]=!EDIT_ON[lk];
   if(btn)btn.textContent=EDIT_ON[lk]?'편집 끝':'사진 편집';
   const hint=document.querySelector('[data-edithint="'+lk+'"]'); if(hint)hint.style.display=EDIT_ON[lk]?'':'none';
   const upl=document.querySelector('[data-upl="'+lk+'"]'); if(upl)upl.style.display=EDIT_ON[lk]?'':'none';
+  ['exp','imp'].forEach(a=>{const el=document.querySelector('[data-'+a+'="'+lk+'"]'); if(el)el.style.display=EDIT_ON[lk]?'':'none';});
   drawLife(lk);
 }
 function lookOff(lk,u){const st=lifeState(lk);st.on=st.on.filter(x=>x!==u);st.off=(st.off||[]).concat([u]);if(st.main===u)st.main=st.on[0]||null;saveLifeState(lk,st);drawLife(lk);}
@@ -347,6 +411,41 @@ document.addEventListener('drop',e=>{
   if(from<0||to<0||from===to){DRAG={lk:null,img:null};return;}
   st.on.splice(to,0,st.on.splice(from,1)[0]);
   saveLifeState(lk,st); DRAG={lk:null,img:null}; drawLife(lk);
+});
+function exportLook(lk){
+  const d=LIFE_DATA[lk]; if(!d)return;
+  const st=lifeState(lk);
+  const payload={life:d.life,snap:(DATA&&DATA.snap?DATA.snap.id:''),on:st.on,off:st.off||[],main:st.main,
+    mine:d.items.filter(x=>x.mine).map(x=>({img:x.img,sub:x.sub||''}))};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='\uBC30\uCE58_'+(d.life||'life')+'.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+function importLook(lk,file){
+  const d=LIFE_DATA[lk]; if(!d)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const j=JSON.parse(r.result);
+      (j.mine||[]).forEach(m=>{ if(!d.items.some(x=>x.img===m.img))d.items.push({img:m.img,sub:m.sub||'',mine:true}); });
+      const st={on:(j.on||[]).filter(u=>d.items.some(x=>x.img===u)),off:j.off||[],main:j.main||null};
+      d.items.forEach(x=>{ if(!st.on.includes(x.img)&&!(st.off||[]).includes(x.img))st.on.push(x.img); });
+      if(!st.main||!st.on.includes(st.main))st.main=st.on[0]||null;
+      saveLifeState(lk,st); saveMine(lk,d); drawLife(lk);
+    }catch(e){ alert('\uBC30\uCE58 \uD30C\uC77C\uC744 \uC77D\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.'); }
+  };
+  r.readAsText(file);
+}
+document.addEventListener('click',e=>{
+  const lk=e.target&&e.target.getAttribute&&e.target.getAttribute('data-exp');
+  if(lk)exportLook(lk);
+});
+document.addEventListener('change',e=>{
+  const lk=e.target&&e.target.getAttribute&&e.target.getAttribute('data-impin');
+  if(lk&&e.target.files&&e.target.files[0]){ importLook(lk,e.target.files[0]); e.target.value=''; }
 });
 function drawAllLives(){Object.keys(LIFE_DATA).forEach(drawLife);}
 function render(){
@@ -478,8 +577,10 @@ function render(){
   const shots={};
   props.forEach(p=>{const life=p.lifestyle||'기타';
     const news=Array.isArray(p.points&&p.points.news)?p.points.news:((p.points&&p.points.new_image)?[{new_image:p.points.new_image,meta:p.points.meta}]:[]);
-    news.forEach(n=>{ if(!n||!n.new_image)return; if(!String(n.meta||'').includes('피팅컷'))return;  // 사람 착용(피팅컷)만
-      (shots[life]=shots[life]||[]).push({img:n.new_image,sub:p.subcategory||(p.points&&p.points.subcategory)||''}); });});
+    news.forEach(n=>{ if(!n||!n.new_image)return;
+      const mt=String(n.meta||'');
+      const kind=mt.includes('피팅컷')?'피팅컷':(mt.includes('제품샷')?'제품샷':'');
+      (shots[life]=shots[life]||[]).push({img:n.new_image,sub:p.subcategory||(p.points&&p.points.subcategory)||'',kind:kind}); });});
   const LORDER=['URBAN_LUX','LUX_ACTIVE','HOLIDAY_CAPSULE','WELLNESS','COMMUTE','STREET','OUTDOOR','URBAN','WELLNESS_ACTIVE','APRES_SKI'];
   const lifes=Object.keys(shots).sort((a,b)=>{const ia=LORDER.indexOf(a),ib=LORDER.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
   if(!lifes.length){
@@ -491,6 +592,8 @@ function render(){
       h+=`<div class="card" data-lifeblock="${lk}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
         <div style="font-weight:800;font-size:16px">${esc(life)} <span class="small" style="opacity:.6">· <span data-cnt="${lk}">${arr.length}</span>착장</span></div>
         <button class="btn" style="padding:2px 10px;font-size:12px" onclick="toggleEdit('${lk}',this)">사진 편집</button>
+        <button class="btn" data-exp="${lk}" style="display:none;padding:2px 10px;font-size:12px">배치 내보내기</button>
+        <label data-imp="${lk}" style="display:none;cursor:pointer;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:3px 9px;background:#fff">배치 가져오기<input type="file" accept="application/json" data-impin="${lk}" style="display:none"></label>
         <label data-upl="${lk}" style="display:none;cursor:pointer;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:3px 9px;background:#fff">＋ 내 사진 추가<input type="file" accept="image/*" multiple data-uplin="${lk}" style="display:none"></label>
         <span class="small" data-edithint="${lk}" style="display:none;color:var(--sub)">★ 대표컷 · × 빼기 · ↔ 드래그로 순서 변경 · 뺀 사진은 아래에서 다시 넣기</span>
       </div>
