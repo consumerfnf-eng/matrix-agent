@@ -171,6 +171,22 @@ async function reloadAll(){
   await pickProject(projKeys[0]||'MLB|SHOES');
   return;
 }
+function halfOfSeason(k){
+  const t=String(k||'').toUpperCase();
+  let m=t.match(/(\d{2})\s*(SS|FW)/); if(m)return {yy:+m[1],half:m[2]};
+  m=t.match(/(\d{4})-(\d{2})/);                       // 2026-03 형태
+  if(m){const y=+m[1]%100,mo=+m[2];return {yy:y,half:(mo>=3&&mo<=8)?'SS':'FW'};}
+  return null;
+}
+function seasonRelV(key,plan){
+  const a=halfOfSeason(key), b=halfOfSeason(plan);
+  if(!a||!b)return 'UNKNOWN';
+  if(a.half!==b.half)return 'CROSS';
+  if(a.yy===b.yy)return 'BASE';
+  if(a.yy===b.yy-1)return 'BASE';
+  if(a.yy>b.yy)return 'LEADING';
+  return 'PAST';
+}
 async function pickProject(pj){
   const snap=(window.PROJ_SNAPS||{})[pj]||null;
   const comp=snap?.computed||{}, cells=comp.cells||{}; let props=[];
@@ -178,7 +194,14 @@ async function pickProject(pj){
   const imgMap=window._prodImgMap||{};
   // 트렌드도 현재 프로젝트 것만. 우선 트렌드 자체의 project, 없으면 소스 project, 그것도 없으면 MLB|SHOES.
   const _pjBase=String(pj).split('|').slice(0,2).join('|');
-  const S2P=window._S2P||{}, raw=(window._trendsRaw||[]).filter(t=>(t.project||(t.source_id&&S2P[t.source_id])||'MLB|SHOES')===_pjBase);
+  const _plan=(snap&&(snap.planning_season||(snap.computed&&snap.computed.season)))||'';
+  const S2P=window._S2P||{};
+  const raw=(window._trendsRaw||[]).filter(t=>{
+    if(((t.project||(t.source_id&&S2P[t.source_id])||'MLB|SHOES'))!==_pjBase)return false;
+    if(!_plan||!t.season_key)return true;                       // 시즌 없는 자료는 통과
+    const rel=seasonRelV(t.season_key,_plan);
+    return !(rel==='CROSS'||rel==='PAST');                      // 반대 반기·과거는 제외
+  });
   const macros=raw.filter(t=>t.coverage_group==='MACRO');
   const kwmapRow=raw.find(t=>t.coverage_group==='KWMAP');
   window.KWKO=Object.assign({},KW_KO); if(kwmapRow){try{const m=JSON.parse(kwmapRow.summary_ko||'{}');Object.assign(window.KWKO,m.ko||{});}catch(_){}}
