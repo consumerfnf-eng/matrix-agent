@@ -447,6 +447,61 @@ document.addEventListener('change',e=>{
   const lk=e.target&&e.target.getAttribute&&e.target.getAttribute('data-impin');
   if(lk&&e.target.files&&e.target.files[0]){ importLook(lk,e.target.files[0]); e.target.value=''; }
 });
+async function shrinkToDataURL(url,maxW,q){
+  return await new Promise(res=>{
+    const im=new Image(); im.crossOrigin='anonymous';
+    const done=v=>res(v);
+    im.onload=()=>{
+      try{
+        const sc=Math.min(1,maxW/(im.naturalWidth||maxW));
+        const w=Math.max(1,Math.round((im.naturalWidth||maxW)*sc));
+        const hgt=Math.max(1,Math.round((im.naturalHeight||maxW)*sc));
+        const c=document.createElement('canvas'); c.width=w; c.height=hgt;
+        c.getContext('2d').drawImage(im,0,0,w,hgt);
+        done(c.toDataURL('image/jpeg',q));
+      }catch(e){ done(null); }        // CORS 등으로 캔버스 오염되면 원본 유지
+    };
+    im.onerror=()=>done(null);
+    im.src=url;
+  });
+}
+async function exportReport(){
+  const btn=document.querySelector('[data-expbtn]');
+  const setTxt=t=>{ if(btn)btn.textContent=t; };
+  Object.keys(EDIT_ON).forEach(k=>{ if(EDIT_ON[k]){EDIT_ON[k]=false; drawLife(k);} });
+  setTxt('이미지 정리 중…');
+  const imgs=[...document.querySelectorAll('img')];
+  const map={};
+  let n=0;
+  for(const im of imgs){
+    const src=im.getAttribute('src')||'';
+    if(!src||map[src])continue;
+    // 이미 작은 data URL 은 그대로, 그 외(외부/스토리지/대용량)는 축소 embed
+    if(/^data:/.test(src)&&src.length<120000){ map[src]=src; continue; }
+    const small=await shrinkToDataURL(src,900,.72);
+    map[src]=small||src;
+    setTxt(`이미지 정리 ${++n}/${imgs.length}…`);
+  }
+  const clone=document.documentElement.cloneNode(true);
+  clone.querySelectorAll('script').forEach(nd=>nd.remove());
+  clone.querySelectorAll('button,label,input').forEach(nd=>nd.remove());
+  clone.querySelectorAll('[data-slot]').forEach(nd=>{ if(!nd.querySelector('img'))nd.remove(); });
+  clone.querySelectorAll('img').forEach(nd=>{
+    const src=nd.getAttribute('src')||'';
+    if(map[src])nd.setAttribute('src',map[src]);
+    nd.removeAttribute('loading'); nd.removeAttribute('onerror');
+  });
+  const title=(document.title||'리포트');
+  const html='<!doctype html><html>'+clone.innerHTML+'</html>';
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const mb=(blob.size/1048576).toFixed(1);
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=title.replace(/[\\/:*?"<>|]/g,'_')+'.html';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  setTxt(`📄 리포트 내보내기(HTML) · ${mb}MB 저장됨`);
+}
 function drawAllLives(){Object.keys(LIFE_DATA).forEach(drawLife);}
 function render(){
   const {comp,cells,props,trends,macros}=DATA;
@@ -573,7 +628,7 @@ function render(){
    </div></div>`;
 
   // ⑤ 스타일 추천 — 라이프스타일별 착장(피팅컷) 이미지 나열, 6개 + 더보기
-  h+=`<div class="sec-h"><span class="n">05</span><h2>스타일 추천 — 라이프스타일별 착장</h2></div>`;
+  h+=`<div class="sec-h"><span class="n">05</span><h2>스타일 추천 — 라이프스타일별 착장</h2></div><div class="row" style="margin:0 0 10px"><button class="btn" data-expbtn="1" onclick="exportReport()" style="padding:4px 14px">📄 리포트 내보내기(HTML)</button><span class="small" style="color:var(--sub);margin-left:8px">지금 화면 그대로 파일 하나로 저장 — 사진은 가로 900px·JPEG로 줄여 넣어 인터넷 없이도 열립니다</span></div>`;
   const shots={};
   props.forEach(p=>{const life=p.lifestyle||'기타';
     const news=Array.isArray(p.points&&p.points.news)?p.points.news:((p.points&&p.points.new_image)?[{new_image:p.points.new_image,meta:p.points.meta}]:[]);
@@ -582,12 +637,14 @@ function render(){
       const kind=mt.includes('피팅컷')?'피팅컷':(mt.includes('제품샷')?'제품샷':'');
       (shots[life]=shots[life]||[]).push({img:n.new_image,sub:p.subcategory||(p.points&&p.points.subcategory)||'',kind:kind}); });});
   const LORDER=['URBAN_LUX','LUX_ACTIVE','HOLIDAY_CAPSULE','WELLNESS','COMMUTE','STREET','OUTDOOR','URBAN','WELLNESS_ACTIVE','APRES_SKI'];
-  const lifes=Object.keys(shots).sort((a,b)=>{const ia=LORDER.indexOf(a),ib=LORDER.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
-  if(!lifes.length){
-    h+=`<div class="card"><div class="empty">사람 착용(피팅컷) 스타일 이미지가 아직 없습니다. 관리자가 04에서 피팅컷을 생성·확정하고 승인하면 여기에 라이프스타일별로 표시됩니다.</div></div>`;
-  } else {
+  // 생성물이 없어도 매트릭스의 라이프스타일은 모두 칸을 만들어 준다(직접 사진을 넣을 수 있도록)
+  const dnaAll=new Set(Object.keys(shots));
+  try{ (dnas||[]).forEach(d=>{ if(d)dnaAll.add(d); }); }catch(_){}
+  if(!dnaAll.size)['URBAN_LUX','LUX_ACTIVE','HOLIDAY_CAPSULE'].forEach(d=>dnaAll.add(d));
+  const lifes=[...dnaAll].sort((a,b)=>{const ia=LORDER.indexOf(a),ib=LORDER.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
+  {
     lifes.forEach((life,li)=>{
-      const arr=shots[life];
+      const arr=shots[life]||[];
       const lk='life'+li;
       h+=`<div class="card" data-lifeblock="${lk}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
         <div style="font-weight:800;font-size:16px">${esc(life)} <span class="small" style="opacity:.6">· <span data-cnt="${lk}">${arr.length}</span>착장</span></div>

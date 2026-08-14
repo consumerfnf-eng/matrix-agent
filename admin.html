@@ -53,7 +53,7 @@ progress{width:100%;height:8px}
 </head>
 <body>
 <header>
-  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-168</span></h1>
+  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-169</span></h1>
   <div id="scopeBar" class="hide" style="display:flex;gap:6px;align-items:center;margin-left:16px">
     <select id="selBrand" style="padding:4px 6px;font-size:12px"></select>
     <span style="opacity:.4">›</span>
@@ -147,6 +147,10 @@ progress{width:100%;height:8px}
       <div class="row">
         <button class="act" id="btnRelabelLD" style="background:var(--acc)">라인·DNA 규칙+학습으로 다시 채우기</button>
         <span class="small" id="relabelLDStat"></span>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="act" id="btnStampSeason" style="background:var(--acc2)">기존 트렌드 기사에 현재 기획시즌 지정</button>
+        <span class="small" id="stampStat" style="color:var(--sub)">시즌이 비어 있는 기사에 <b>지금 선택된 기획시즌</b>을 넣습니다. FW 기사면 헤더에서 FW를 고른 뒤 누르세요.</span>
       </div>
       <div class="row" style="margin-top:10px">
         <button class="act" id="btnResubcat" style="background:var(--acc2)">서브카테고리 새 규칙으로 다시 계산</button>
@@ -767,14 +771,14 @@ async function handleFiles(files){
               macroRows.push({source_id:src.id, article_title:`${no} ${en}`.trim(), publisher:'MACRO', season:null,
                 coverage_group:'MACRO', summary_ko:`${ko}||${desc}||${line||''}`, trend_keywords:null, og_image_url:null, source_url:null});}
             const all=[...rows,...macroRows];
-            for(let i=0;i<all.length;i+=200)await ins('trend_items',all.slice(i,i+200).map(r=>({...r,project:curProject()})));
+            for(let i=0;i<all.length;i+=200)await ins('trend_items',all.slice(i,i+200).map(r=>({season_key:planKeyNow(),...r,project:curProject()})));
             const kws=new Set(rows.flatMap(r=>String(r.trend_keywords||'').split('|').filter(Boolean)));
             log('#srcLog',`${f.name} → 트렌드 리포트 구조화 적재: 기사 ${rows.length}건 · 8대 트렌드 ${macroRows.length}개 · 고유 키워드 ${kws.size}개 (경향·워드클라우드·8대 트렌드로 반영)`);
             continue;
           }
         }
         const src=(await ins('sources',[{kind:'TREND',filename:f.name,row_count:1,project:curProject()}]))[0];
-        await ins('trend_items',[{source_id:src.id,article_title:f.name,summary_ko:text.slice(0,8000),project:curProject()}]);
+        await ins('trend_items',[{source_id:src.id,article_title:f.name,summary_ko:text.slice(0,8000),project:curProject(),season_key:planKeyNow()}]);
         log('#srcLog',`${f.name} → 트렌드 원문 1건 (구조화 데이터 없음 — 요약만 저장)`);continue;
       }
       const recs=parseCSV(text); if(!recs.length){log('#srcLog',`${f.name}: 빈 파일`);continue;}
@@ -842,7 +846,7 @@ async function handleFiles(files){
           const mapRow={source_id:src.id, article_title:'(keyword map)', publisher:null, coverage_group:'KWMAP',
             summary_ko:JSON.stringify({ko:labKo,en:labEn}), trend_keywords:null, og_image_url:null, source_url:null};
           const all=[...rows,...macroRows,mapRow];
-          for(let i=0;i<all.length;i+=200)await ins('trend_items',all.slice(i,i+200).map(r=>({...r,project:curProject()})));
+          for(let i=0;i<all.length;i+=200)await ins('trend_items',all.slice(i,i+200).map(r=>({season_key:planKeyNow(),...r,project:curProject()})));
           log('#srcLog',`${f.name} → 트렌드 신호 CSV: 신호행 ${recs.length} → 기사 ${rows.length}건 · 매크로 ${macroRows.length}개 · 신호코드 ${Object.keys(labKo).length}종(영어 통일, 한글맵 저장). 경향·워드클라우드·8대 트렌드로 반영`);
           continue;
         }
@@ -865,7 +869,7 @@ async function handleFiles(files){
             source_type:gv(r,'source_type')||null,evidence_stage:gv(r,'evidence_stage')||null,confidence:gv(r,'confidence')||null,
             source_url:url||null,og_image_url:img||null,summary_ko:sum||null,
             planning_implication_ko:gv(r,'planning_implication')||null,trend_keywords:kw||null};});
-        for(let i=0;i<rows.length;i+=200)await ins('trend_items',rows.slice(i,i+200).map(r=>({...r,project:curProject()})));
+        for(let i=0;i<rows.length;i+=200)await ins('trend_items',rows.slice(i,i+200).map(r=>({season_key:planKeyNow(),...r,project:curProject()})));
         const withKw=rows.filter(r=>r.trend_keywords).length, withImg=rows.filter(r=>r.og_image_url).length;
         log('#srcLog',`${f.name} → 기사 ${rows.length}건 · 키워드 ${withKw} · 이미지 ${withImg}`);
       }else{
@@ -963,6 +967,24 @@ $('#btnRejudge').onclick=async()=>{
 };
 
 /* ----- 라인·DNA 규칙+학습 재판정 (매트릭스 칸 재배치) ----- */
+
+$('#btnStampSeason').onclick=async()=>{
+  const st=$('#stampStat'); const plan=planKeyNow(); const pj=curProject();
+  if(!confirm(`이 프로젝트(${pj})의 트렌드 기사 중 시즌이 비어 있는 것을 모두 "${plan}" 로 지정합니다.\n계속할까요?`))return;
+  st.textContent='확인 중…';
+  try{
+    const rows=await sel('trend_items','select=id,season_key,project&project=eq.'+encodeURIComponent(pj)+'&limit=5000');
+    const blanks=rows.filter(r=>!r.season_key);
+    if(!blanks.length){ st.textContent=`시즌이 비어 있는 기사가 없습니다(전체 ${rows.length}건).`; return; }
+    let done=0;
+    for(let i=0;i<blanks.length;i+=100){
+      const ids=blanks.slice(i,i+100).map(r=>r.id);
+      await upd('trend_items','id=in.('+ids.join(',')+')',{season_key:plan});
+      done+=ids.length; st.textContent=`${done}/${blanks.length} 지정 중…`;
+    }
+    st.textContent=`완료 — ${done}건을 ${plan} 으로 지정했습니다. 리포트에서 해당 시즌에만 나옵니다.`;
+  }catch(e){ st.textContent='실패: '+e.message; }
+};
 $('#btnResubcat').onclick=async()=>{
   if(!confirm('이미 저장된 라벨을 바탕으로 서브카테고리를 새 분류체계로 다시 계산합니다.\n(AI 재호출 없음 · 손으로 지은 그룹명도 덮어씁니다)\n계속할까요?'))return;
   const stat=$('#resubcatStat'); stat.textContent='불러오는 중…';
