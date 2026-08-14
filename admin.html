@@ -53,7 +53,7 @@ progress{width:100%;height:8px}
 </head>
 <body>
 <header>
-  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-170</span></h1>
+  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-171</span></h1>
   <div id="scopeBar" class="hide" style="display:flex;gap:6px;align-items:center;margin-left:16px">
     <select id="selBrand" style="padding:4px 6px;font-size:12px"></select>
     <span style="opacity:.4">›</span>
@@ -3188,37 +3188,22 @@ $('#btnRptLoad').onclick=async()=>{
     const cfg=await rptLoadCfg();
     RPT.sets=(cfg[rptCfgKey()])||{};
 
-    drawRptTrend(); drawRptMatrix(); drawRptLifes(); drawRptTray();
+    await drawRptMatrixReuse(); drawRptLifes(); drawRptTray();
     st.textContent=RPT.snap?`승인 스냅샷 로드됨 · 트렌드 ${RPT.trend.length}건 · 트레이 ${RPT.tray.length}장`
                            :'승인된 매트릭스가 없습니다. 아래 3번에서 먼저 승인하세요.';
   }catch(e){ st.textContent='실패: '+e.message; }
 };
 
-function drawRptTrend(){
-  const box=$('#rptTrend'); if(!box)return;
-  const macro=RPT.trend.filter(t=>t.coverage_group==='MACRO');
-  const arts=RPT.trend.filter(t=>t.coverage_group!=='MACRO');
-  box.innerHTML=`<div style="border:1px solid var(--line);border-radius:9px;padding:10px;background:#fcfbf8">
-    <b style="font-size:13px">트렌드</b> <span class="small">· 기사 ${arts.length}건${macro.length?` · 매크로 ${macro.length}건`:''}</span>
-    <div class="small" style="margin-top:6px;max-height:120px;overflow:auto;line-height:1.7">
-      ${arts.slice(0,25).map(t=>`<div>· ${esc(String(t.article_title||'').slice(0,80))}</div>`).join('')||'<span style="color:var(--sub)">이 시즌 기사가 없습니다.</span>'}
-    </div></div>`;
-}
 
-function drawRptMatrix(){
-  const box=$('#rptMatrix'); if(!box)return;
-  const cells=(RPT.snap&&RPT.snap.computed&&RPT.snap.computed.cells)||{};
-  const keys=Object.keys(cells);
-  if(!keys.length){ box.innerHTML='<div class="small" style="color:var(--sub)">확정 매트릭스가 없습니다.</div>'; return; }
-  const lines=[...new Set(keys.map(k=>k.split('|')[0]))];
-  const dnas=[...new Set(keys.map(k=>k.split('|')[1]))];
-  box.innerHTML=`<b style="font-size:13px">확정 매트릭스</b>
-   <table style="margin-top:6px"><thead><tr><th></th>${dnas.map(d=>`<th>${esc(d)}</th>`).join('')}</tr></thead><tbody>
-   ${lines.map(l=>`<tr><th style="text-align:left">${esc(l)}</th>${dnas.map(d=>{
-      const c=cells[l+'|'+d]; const n=c?(c.count||(c.refs||[]).length||0):0;
-      return `<td style="text-align:center;background:${n?`rgba(196,90,74,${Math.min(.35,n/40)})`:'transparent'}">${n||'—'}</td>`;
-   }).join('')}</tr>`).join('')}
-   </tbody></table>`;
+async function drawRptMatrixReuse(){
+  // 04의 반응형 매트릭스 + 트렌드 시그널을 그대로 재사용
+  const box=$('#rptMatrix'), tbox=$('#rptTrend');
+  try{
+    if(typeof renderMatrix==='function'){ await renderMatrix(); }
+    const src=$('#matrixWrap');
+    box.innerHTML=src?src.innerHTML:'<div class="small">매트릭스를 먼저 04에서 계산하세요.</div>';
+  }catch(e){ box.innerHTML='<div class="small" style="color:var(--err)">매트릭스 로드 실패: '+esc(e.message)+'</div>'; }
+  if(tbox)tbox.innerHTML='';   // 트렌드는 매트릭스 렌더러가 함께 그림
 }
 
 function rptLifes(){
@@ -3349,44 +3334,110 @@ $('#btnRptSave').onclick=async()=>{
 
 $('#btnRptExport').onclick=async()=>{
   const st=$('#rptStat'); st.textContent='이미지 정리 중…';
-  const shrink=(url)=>new Promise(res=>{
+  const shrink=(url,w)=>new Promise(res=>{
     const im=new Image(); im.crossOrigin='anonymous';
     im.onload=()=>{ try{
-      const sc=Math.min(1,900/(im.naturalWidth||900));
+      const sc=Math.min(1,w/(im.naturalWidth||w));
       const c=document.createElement('canvas');
-      c.width=Math.round((im.naturalWidth||900)*sc); c.height=Math.round((im.naturalHeight||900)*sc);
+      c.width=Math.round((im.naturalWidth||w)*sc); c.height=Math.round((im.naturalHeight||w)*sc);
       c.getContext('2d').drawImage(im,0,0,c.width,c.height);
-      res(c.toDataURL('image/jpeg',.72));
+      res(c.toDataURL('image/jpeg',.75));
     }catch(e){ res(null); } };
     im.onerror=()=>res(null); im.src=url;
   });
-  const lifes=rptLifes();
-  const cache={};
-  for(const life of lifes)for(const S of (RPT.sets[life]||[]))
-    for(const u of [S.look,...(S.prods||[]),...(S.refs||[])])
-      if(u&&!cache[u])cache[u]=await shrink(u)||u;
+  const lifes=rptLifes().filter(l=>(RPT.sets[l]||[]).some(S=>S.look||(S.prods||[]).filter(Boolean).length||(S.refs||[]).filter(Boolean).length));
+  const cache={}; let n=0, tot=0;
+  lifes.forEach(l=>(RPT.sets[l]||[]).forEach(S=>{ tot+=1+(S.prods||[]).filter(Boolean).length+(S.refs||[]).filter(Boolean).length; }));
+  for(const life of lifes)for(const S of (RPT.sets[life]||[])){
+    if(S.look&&!cache[S.look]){ cache[S.look]=await shrink(S.look,1100)||S.look; st.textContent=`이미지 ${++n}/${tot}…`; }
+    for(const u of [...(S.prods||[]),...(S.refs||[])]) if(u&&!cache[u]){ cache[u]=await shrink(u,520)||u; st.textContent=`이미지 ${++n}/${tot}…`; }
+  }
+  // 트렌드 요약
+  const arts=RPT.trend.filter(t=>t.coverage_group!=='MACRO');
+  const kw={};
+  arts.forEach(t=>String(t.summary_ko||'').split(/[^A-Za-z가-힣_]+/).forEach(w=>{ if(w.length>2)kw[w]=(kw[w]||0)+1; }));
+  const topKw=Object.entries(kw).sort((a,b)=>b[1]-a[1]).slice(0,14);
   const cells=(RPT.snap&&RPT.snap.computed&&RPT.snap.computed.cells)||{};
-  const body=`<h1 style="font:700 20px/1.4 system-ui">${esc(CUR_BRAND)} ${esc(planKeyNow())} ${esc(CUR_CAT)} 시즌기획 리포트</h1>
-   ${$('#rptMatrix').innerHTML}
-   ${lifes.map(life=>`<h2 style="font:700 16px/1.6 system-ui;margin-top:22px">${esc(life)}</h2>
-     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px">
-     ${(RPT.sets[life]||[]).map(S=>`<div style="border:1px solid #e5e0d8;border-radius:8px;padding:8px">
-       <div style="display:flex;gap:8px">
-         <div style="flex:0 0 55%">${S.look?`<img src="${cache[S.look]}" style="width:100%;border-radius:6px">`:''}</div>
-         <div style="flex:1;display:flex;flex-direction:column;gap:5px">
-           ${(S.prods||[]).filter(Boolean).map(u=>`<img src="${cache[u]}" style="width:100%;border-radius:6px">`).join('')}
-         </div></div>
-       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px">
-         ${(S.refs||[]).filter(Boolean).map(u=>`<img src="${cache[u]}" style="width:100%;border-radius:6px">`).join('')}
-       </div></div>`).join('')}
-     </div>`).join('')}`;
-  const html=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(CUR_BRAND)}_${esc(planKeyNow())}_${esc(CUR_CAT)}</title>
-    <style>body{font-family:system-ui;margin:24px;color:#2b2723}table{border-collapse:collapse;font-size:12px}th,td{border:1px solid #e5e0d8;padding:4px 8px}</style>
-    </head><body>${body}</body></html>`;
+  const ck=Object.keys(cells);
+  const lines=[...new Set(ck.map(k=>k.split('|')[0]))], dnas=[...new Set(ck.map(k=>k.split('|')[1]))];
+  const maxN=Math.max(1,...ck.map(k=>cells[k].count||(cells[k].refs||[]).length||0));
+
+  const css=`*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic Neo',system-ui,sans-serif;color:#111214;background:#fff;-webkit-font-smoothing:antialiased}
+  :root{--line:#E7E7EA;--sub:#6B6C70;--accent:#C45A4A}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 32px}
+  .hero{padding:56px 0 40px;border-bottom:1px solid var(--line)}
+  .badge{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.4px;color:var(--accent);background:#FDF3F1;border:1px solid #F4DCD7;padding:6px 16px;border-radius:100px}
+  .hero h1{margin:14px 0 6px;font-size:38px;font-weight:800;letter-spacing:-.6px}
+  .hero p{margin:0;color:var(--sub);font-size:15px}
+  section{padding:38px 0;border-bottom:1px solid var(--line)}
+  .sec-badge{font-size:11.5px;font-weight:800;color:var(--sub);letter-spacing:.8px}
+  h2{margin:8px 0 4px;font-size:24px;font-weight:800;letter-spacing:-.3px}
+  .sub{margin:0 0 18px;color:var(--sub);font-size:14px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{font-size:12.5px;font-weight:700;color:var(--sub);background:#F7F7F8;border:1px solid var(--line);border-radius:100px;padding:6px 14px}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:center}
+  th{background:#FAFAFB;font-weight:800}
+  td.rowh{text-align:left;font-weight:800;background:#FAFAFB}
+  .sets{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
+  .set{border:1px solid var(--line);border-radius:16px;padding:14px;background:#fff;box-shadow:0 4px 20px rgba(17,18,20,.04)}
+  .set-top{display:grid;grid-template-columns:1.35fr 1fr;gap:12px}
+  .look{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#FAFAFB;aspect-ratio:3/4}
+  .look img{width:100%;height:100%;object-fit:cover;display:block}
+  .prods{display:flex;flex-direction:column;gap:10px}
+  .prod{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#FAFAFB;aspect-ratio:4/3}
+  .prod img{width:100%;height:100%;object-fit:contain;display:block}
+  .reflabel{margin:12px 0 6px;font-size:11.5px;font-weight:800;color:var(--sub);letter-spacing:.5px}
+  .refs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .ref{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#FAFAFB;aspect-ratio:5/4}
+  .ref img{width:100%;height:100%;object-fit:contain;display:block}
+  @media(max-width:900px){.wrap{padding:0 18px}.sets{grid-template-columns:1fr}.hero h1{font-size:28px}}
+  @media print{section{break-inside:avoid}.set{break-inside:avoid}}`;
+
+  const body=`<div class="hero"><div class="wrap">
+      <span class="badge">${esc(CUR_BRAND)} · ${esc(planKeyNow())} · ${esc(CUR_CAT)}</span>
+      <h1>시즌기획 리포트</h1>
+      <p>트렌드 반영 · 확정 매트릭스 · 라이프스타일별 스타일 제안</p></div></div>
+
+    <section><div class="wrap">
+      <div class="sec-badge">01 TREND</div><h2>트렌드 반영</h2>
+      <p class="sub">이번 시즌 자료 ${arts.length}건에서 반복 신호를 뽑았습니다.</p>
+      <div class="chips">${topKw.map(([w,c])=>`<span class="chip">${esc(w)} <b style="color:var(--accent)">${c}</b></span>`).join('')||'<span class="chip">자료 없음</span>'}</div>
+      <div class="sub" style="margin-top:16px;max-height:none">${arts.slice(0,12).map(t=>`· ${esc(String(t.article_title||'').slice(0,90))}`).join('<br>')}</div>
+    </div></section>
+
+    <section><div class="wrap">
+      <div class="sec-badge">02 MATRIX</div><h2>확정 매트릭스</h2>
+      <p class="sub">라인 × 라이프스타일 · 숫자는 참고 모델 수</p>
+      <table><thead><tr><th></th>${dnas.map(d=>`<th>${esc(d)}</th>`).join('')}</tr></thead><tbody>
+      ${lines.map(l=>`<tr><td class="rowh">${esc(l)}</td>${dnas.map(d=>{const c=cells[l+'|'+d];const v=c?(c.count||(c.refs||[]).length||0):0;
+        return `<td style="background:rgba(196,90,74,${v?(0.06+0.3*v/maxN).toFixed(3):0})">${v||'—'}</td>`;}).join('')}</tr>`).join('')}
+      </tbody></table></div></section>
+
+    ${lifes.map((life,li)=>`<section><div class="wrap">
+      <div class="sec-badge">${String(li+3).padStart(2,'0')} STYLE</div><h2>${esc(life)}</h2>
+      <p class="sub">착장 1 + 제품 3 + 참고 3</p>
+      <div class="sets">
+      ${(RPT.sets[life]||[]).filter(S=>S.look||(S.prods||[]).filter(Boolean).length||(S.refs||[]).filter(Boolean).length).map(S=>`
+        <div class="set">
+          <div class="set-top">
+            <div class="look">${S.look?`<img src="${cache[S.look]}">`:''}</div>
+            <div class="prods">${[0,1,2].map(i=>{const u=(S.prods||[])[i];return `<div class="prod">${u?`<img src="${cache[u]}">`:''}</div>`;}).join('')}</div>
+          </div>
+          ${(S.refs||[]).filter(Boolean).length?`<div class="reflabel">REFERENCE</div>
+          <div class="refs">${[0,1,2].map(i=>{const u=(S.refs||[])[i];return `<div class="ref">${u?`<img src="${cache[u]}">`:''}</div>`;}).join('')}</div>`:''}
+        </div>`).join('')}
+      </div></div></section>`).join('')}`;
+
+  const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>${esc(CUR_BRAND)}_${esc(planKeyNow())}_${esc(CUR_CAT)}_시즌기획</title>
+    <style>${css}</style></head><body>${body}</body></html>`;
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download=`${CUR_BRAND}_${planKeyNow()}_${CUR_CAT}_리포트.html`;
+  a.download=`${CUR_BRAND}_${planKeyNow()}_${CUR_CAT}_시즌기획리포트.html`;
   document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
   st.textContent=`내보내기 완료 · ${(blob.size/1048576).toFixed(1)}MB`;
 };
 
