@@ -53,7 +53,7 @@ progress{width:100%;height:8px}
 </head>
 <body>
 <header>
-  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-172</span></h1>
+  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-173</span></h1>
   <div id="scopeBar" class="hide" style="display:flex;gap:6px;align-items:center;margin-left:16px">
     <select id="selBrand" style="padding:4px 6px;font-size:12px"></select>
     <span style="opacity:.4">›</span>
@@ -292,7 +292,7 @@ progress{width:100%;height:8px}
 <section id="tab-pub" class="hide">
   <div class="card">
     <h2><span class="n">1</span>리포트 편집 — <span id="rptScope" style="color:var(--acc2)"></span></h2>
-    <p class="small" style="margin-bottom:8px">확정 매트릭스·트렌드 아래에 <b>라이프스타일별 블록</b>이 나옵니다. 블록마다 ① <b>참고 레퍼런스(AI REFERENCE SUGGESTION)</b> ② <b>대표 착장 컷</b> ③ <b>AI 생성 제품 카드(메인+서브)</b>를 직접 셀렉해 채우세요 — 맨 아래 <b>생성물 트레이</b>에서 끌어오거나 컴퓨터 사진을 바로 끌어다 놓으면 됩니다. 대표 착장 컷을 넣으면 <b>색 팔레트가 자동 추출</b>됩니다. 저장하면 viewer 리포트에 그대로 반영됩니다.</p>
+    <p class="small" style="margin-bottom:8px">확정 매트릭스와 트렌드가 아래에 나옵니다. 라이프스타일별 카드에 <b>착장샷 1 + 참고 3</b>을 채우고, 세트는 <b>＋ 세트</b>로 계속 추가하세요 — 맨 아래 <b>생성물 트레이</b>에서 끌어오거나 컴퓨터에서 바로 끌어다 놓으면 됩니다.</p>
     <div class="row" style="margin-bottom:8px">
       <button class="act" id="btnRptLoad" style="background:var(--acc2)">불러오기 / 새로고침</button>
       <button class="act" id="btnRptSave">배치 저장</button>
@@ -306,7 +306,7 @@ progress{width:100%;height:8px}
   <div class="card" id="trayCard">
     <h2><span class="n">2</span>생성물 트레이 — 여기서 카드 칸으로 끌어다 놓으세요</h2>
     <div class="row" style="margin-bottom:6px">
-      <select id="trayKind" style="width:150px"><option value="ALL">전체</option><option value="피팅컷">착장샷만</option><option value="제품샷">제품샷만</option><option value="레퍼">레퍼런스만</option></select>
+      <select id="trayKind" style="width:150px"><option value="ALL">전체</option><option value="피팅컷">착장샷만</option><option value="제품샷">제품샷만</option></select>
       <span class="small" id="trayStat" style="color:var(--sub)"></span>
     </div>
     <div id="rptTray" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;max-height:330px;overflow:auto"></div>
@@ -3139,9 +3139,8 @@ $('#btnSaveSnap').onclick=()=>saveSnapshot(false);
 
 /* ============ 05 승인 ============ */
 /* ================= 05 리포트 편집기 ================= */
-let RPT={snap:null,sets:{},blocks:{},tray:[],trend:[],matrix:null};
-const RPT_KEY='report_layout';        // (구) 착장1+제품3 세트 — 마이그레이션용
-const RPT_BLK_KEY='report_blocks';    // (신) 라이프스타일 블록 — viewer가 읽는 키
+let RPT={snap:null,sets:{},tray:[],trend:[],matrix:null};
+const RPT_KEY='report_layout';
 
 function rptScopeLabel(){ return `${CUR_BRAND} · ${planKeyNow()} · ${CUR_CAT}`; }
 
@@ -3175,23 +3174,12 @@ $('#btnRptLoad').onclick=async()=>{
           RPT.tray.push({img:n.new_image,life,sub:p.subcategory||'',kind:mt.includes('피팅컷')?'피팅컷':'제품샷'});
         });
       });
-      const cells=(RPT.snap.computed&&RPT.snap.computed.cells)||{};
-      Object.keys(cells).forEach(k=>{
-        const life=String(k).split('|')[1]||'';
-        (cells[k].refs||[]).slice(0,40).forEach(r=>{
-          const im=r.img||''; if(!im)return;
-          RPT.tray.push({img:im,life,sub:r.sub||'',kind:'레퍼',brand:r.brand||''});
-        });
-      });
+      // 매트릭스 레퍼런스는 담지 않음 — 04에서 "이 카드 확정"한 AI 생성물만 트레이에 올린다
     }
 
-    // 4) 저장된 배치 — 신(report_blocks) 우선, 없으면 구(report_layout) 세트에서 마이그레이션
-    let blkCfg={}; try{const r=await sel('app_config','select=value&key=eq.'+RPT_BLK_KEY);blkCfg=(r[0]&&r[0].value)||{};}catch(_){}
-    const oldCfg=await rptLoadCfg();
-    const ck=rptCfgKey();
-    if(blkCfg[ck]){ RPT.blocks=blkCfg[ck]; }
-    else if(oldCfg[ck]){ RPT.blocks=migrateSetsToBlocks(oldCfg[ck]); }
-    else { RPT.blocks={}; }
+    // 4) 저장된 배치
+    const cfg=await rptLoadCfg();
+    RPT.sets=(cfg[rptCfgKey()])||{};
 
     await drawRptMatrixReuse(); drawRptLifes(); drawRptTray();
     st.textContent=RPT.snap?`승인 스냅샷 로드됨 · 트렌드 ${RPT.trend.length}건 · 트레이 ${RPT.tray.length}장`
@@ -3211,100 +3199,52 @@ async function drawRptMatrixReuse(){
   if(tbox)tbox.innerHTML='';   // 트렌드는 매트릭스 렌더러가 함께 그림
 }
 
-/* ===== 색 팔레트 자동추출 (대표 착장 컷 → 대표색 4) ===== */
-const CNAMES=[['Ivory','#F5F1E6'],['White','#FFFFFF'],['Cream','#F3E9D2'],['Beige','#E8DBC5'],['Sand','#D8C3A5'],['Camel','#C19A6B'],['Tan','#B08D57'],['Brown','#7B5B3F'],['Chocolate','#4B3621'],['Black','#1A1A1A'],['Charcoal','#3A3A3A'],['Gray','#9A9A9A'],['Silver','#C8C8C8'],['Navy','#26324D'],['Blue','#3A5A8C'],['Powder Blue','#AEC6E0'],['Sky','#8EC5E8'],['Teal','#3E8E8A'],['Sage','#9CA98B'],['Green','#4E7A5A'],['Olive','#6B6A3A'],['Mint','#B7E0C8'],['Blush','#E7C3C1'],['Pink','#E39FB0'],['Rose','#C9788A'],['Red','#B23B3B'],['Coral','#E0747D'],['Orange','#E08A4B'],['Mustard','#D0A32B'],['Yellow','#E6CE5B'],['Lavender','#B7A8CE'],['Purple','#6C5B7F'],['Plum','#5A3E52']];
-function nameOfHex(hex){const c=hx=>[parseInt(hx.slice(1,3),16),parseInt(hx.slice(3,5),16),parseInt(hx.slice(5,7),16)];const [r,g,b]=c(hex);let best='',bd=1e9;for(const[n,h]of CNAMES){const[R,G,B]=c(h);const d=(r-R)**2+(g-G)**2+(b-B)**2;if(d<bd){bd=d;best=n;}}return best;}
-function paletteFromImg(url,k){k=k||4;return new Promise(res=>{const im=new Image();im.crossOrigin='anonymous';
-  im.onload=()=>{try{
-    const w=44,h=Math.max(1,Math.round(44*(im.naturalHeight||1)/(im.naturalWidth||1)));
-    const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');ctx.drawImage(im,0,0,w,h);
-    const d=ctx.getImageData(0,0,w,h).data;const bk={};
-    for(let i=0;i<d.length;i+=4){const a=d[i+3];if(a<128)continue;const r=d[i],g=d[i+1],b=d[i+2];
-      if(r>247&&g>247&&b>247)continue; // 배경 화이트 제외
-      const key=((r>>4)<<8)|((g>>4)<<4)|(b>>4);const q=bk[key]||(bk[key]={r:0,g:0,b:0,n:0});q.r+=r;q.g+=g;q.b+=b;q.n++;}
-    const arr=Object.values(bk).sort((a,b)=>b.n-a.n).slice(0,k).map(q=>{const r=Math.round(q.r/q.n),g=Math.round(q.g/q.n),b=Math.round(q.b/q.n);return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');});
-    res(arr);
-  }catch(e){res([]);}};
-  im.onerror=()=>res([]);im.src=url;});}
-async function rptExtractPalette(life){const B=RPT.blocks[life];if(!B)return;B.palette=B.hero?await paletteFromImg(B.hero,4):[];drawRptLifes();}
-function heroPaletteFromFile(file){return new Promise(r=>{const rd=new FileReader();rd.onload=async()=>r(await paletteFromImg(rd.result,4));rd.onerror=()=>r([]);rd.readAsDataURL(file);});}
-async function rptSetHeroPaletteFromFile(life,file){const B=rptBlock(life);const p=await heroPaletteFromFile(file);if(p.length){B.palette=p;drawRptLifes();}}
-
-/* ===== 라이프스타일 블록: 참고 레퍼런스 / 대표 착장 컷 / AI 생성 제품 카드 ===== */
-function migrateSetsToBlocks(sets){const out={};Object.entries(sets||{}).forEach(([life,arr])=>{const B={tag:'',title:'',desc:'',hero:null,refs:[],options:[],palette:[]};
-  (arr||[]).forEach(S=>{ if(S.look){ if(!B.hero)B.hero=S.look; else if(!B.refs.includes(S.look))B.refs.push(S.look); }
-    (S.prods||[]).forEach(u=>{ if(u&&!B.refs.includes(u))B.refs.push(u); });
-    if(S.title&&!B.title)B.title=S.title; if(S.desc&&!B.desc)B.desc=S.desc; });
-  out[life]=B;});return out;}
 function rptLifes(){
   const cells=(RPT.snap&&RPT.snap.computed&&RPT.snap.computed.cells)||{};
   const s=new Set(Object.keys(cells).map(k=>k.split('|')[1]).filter(Boolean));
   RPT.tray.forEach(t=>{ if(t.life)s.add(t.life); });
-  Object.keys(RPT.blocks).forEach(l=>s.add(l));
+  Object.keys(RPT.sets).forEach(l=>s.add(l));
   return [...s];
 }
-function rptBlock(life){
-  RPT.blocks[life]=RPT.blocks[life]||{tag:'',title:'',desc:'',hero:null,refs:[],options:[],palette:[]};
-  const B=RPT.blocks[life]; B.refs=B.refs||[]; B.options=B.options||[]; B.palette=B.palette||[];
-  return B;
-}
-const SLB={hero:'대표 착장 컷<br>드래그',ref:'＋참고',main:'제품 메인',sub:'서브'};
-function rptSlot(life,kind,idx,url,big){
-  const h=big?(kind==='hero'?230:150):64;
-  return `<div class="rslot" data-life="${esc(life)}" data-kind="${kind}" data-idx="${idx==null?'':idx}"
+
+function rptSlot(life,si,kind,pi,url){
+  const big=(kind==='look');
+  const h=big?190:(kind==='prod'?58:58);
+  return `<div class="rslot" data-life="${esc(life)}" data-si="${si}" data-kind="${kind}" data-pi="${pi==null?'':pi}"
     ondragover="event.preventDefault();this.style.outline='2px dashed var(--acc2)'" ondragleave="this.style.outline=''"
-    style="position:relative;border:1px ${url?'solid':'dashed'} var(--line);border-radius:8px;overflow:hidden;background:#f4f1ef;height:${h}px;display:flex;align-items:center;justify-content:center;cursor:pointer">
-    ${url?`<img src="${esc(url)}" style="width:100%;height:100%;object-fit:${(kind==='hero'||kind==='main')?'cover':'contain'}">`
-        :`<span class="small" style="color:var(--sub);font-size:10px;text-align:center;line-height:1.25">${SLB[kind]||'사진'}</span>`}
-    ${url?`<button data-clr="1" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:4px;font-size:11px;padding:0 6px;cursor:pointer">×</button>`:''}
+    style="position:relative;border:1px ${url?'solid':'dashed'} var(--line);border-radius:7px;overflow:hidden;background:#f4f1ef;height:${h}px;display:flex;align-items:center;justify-content:center;cursor:pointer">
+    ${url?`<img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover">`
+        :`<span class="small" style="color:var(--sub);font-size:10px;text-align:center">${big?'착장샷':'참고'}</span>`}
+    ${url?`<button data-clr="1" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:4px;font-size:10px;padding:0 5px;cursor:pointer">×</button>`:''}
   </div>`;
 }
+
 function drawRptLifes(){
   const box=$('#rptLifes'); if(!box)return;
   const lifes=rptLifes();
   if(!lifes.length){ box.innerHTML='<div class="small" style="color:var(--sub)">라이프스타일이 없습니다. 먼저 매트릭스를 승인하세요.</div>'; return; }
   box.innerHTML=lifes.map(life=>{
-    const B=rptBlock(life);
-    const pal=(B.palette||[]).map(hx=>`<span title="${esc(nameOfHex(hx))} ${esc(hx)}" style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--sub);margin:2px 8px 2px 0"><span style="width:16px;height:16px;border-radius:4px;border:1px solid var(--line);background:${esc(hx)};flex:none"></span>${esc(nameOfHex(hx))}</span>`).join('')||'<span class="small" style="color:var(--sub)">대표 착장 컷을 넣으면 색이 자동 추출됩니다</span>';
-    // ① 참고 레퍼런스 그리드 (+빈 슬롯 1)
-    const refGrid=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:6px">
-      ${(B.refs||[]).map((u,ri)=>rptSlot(life,'ref',ri,u,false)).join('')}
-      ${rptSlot(life,'ref','new',null,false)}
-    </div>`;
-    // ③ AI 생성 제품 카드
-    const cards=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px">
-      ${(B.options||[]).map((O,ci)=>`<div style="border:1px solid var(--line);border-radius:9px;padding:8px;background:#fcfbf8;position:relative">
-        <button data-delcard="${esc(life)}" data-idx="${ci}" style="position:absolute;top:5px;right:5px;border:0;background:transparent;color:var(--sub);cursor:pointer;font-size:13px;z-index:2">✕</button>
-        <div style="display:flex;gap:6px">
-          <div style="flex:0 0 66%">${rptSlot(life,'main',ci,O.main,true)}</div>
-          <div style="flex:1">${rptSlot(life,'sub',ci,O.sub,false)}<div class="small" style="text-align:center;color:var(--sub);font-size:9px;margin-top:3px">서브 뷰</div></div>
-        </div>
-        <input data-oname="${esc(life)}" data-idx="${ci}" value="${esc(O.name||'')}" placeholder="컨셉명 (예: Gradation Punching)" style="width:100%;margin-top:7px;font-size:12px;font-weight:700;padding:4px 6px">
-        <textarea data-odesc="${esc(life)}" data-idx="${ci}" placeholder="한 줄 설명 — 어떤 트렌드/디자인 포인트인지" style="width:100%;margin-top:5px;font-size:11.5px;padding:4px 6px;height:46px;resize:vertical">${esc(O.desc||'')}</textarea>
-      </div>`).join('')}
-      <button data-addcard="${esc(life)}" style="border:1px dashed var(--line);border-radius:9px;background:#fff;color:var(--acc2);cursor:pointer;min-height:120px;font-size:13px;font-weight:700">＋ 제품 카드</button>
-    </div>`;
-    return `<div style="border:1px solid var(--line);border-radius:11px;padding:14px;margin-bottom:16px;background:#fff">
-      <div class="row" style="align-items:center;gap:8px;margin-bottom:8px">
-        <b style="font-size:15px">${esc(life)}</b>
-        <input data-btag="${esc(life)}" value="${esc(B.tag||'')}" placeholder="THEME 라벨 (예: THEME A · FADE)" style="flex:1;min-width:150px;font-size:11.5px;padding:4px 6px;color:var(--sub)">
-        <input data-btitle="${esc(life)}" value="${esc(B.title||'')}" placeholder="컨셉 타이틀 (예: ALMOND FADE)" style="flex:1;min-width:150px;font-size:12px;font-weight:700;padding:4px 6px">
+    const sets=(RPT.sets[life]||[{look:null,prods:[],refs:[]}]);
+    return `<div style="border:1px solid var(--line);border-radius:9px;padding:10px;margin-bottom:12px;background:#fff">
+      <div class="row" style="margin-bottom:8px;align-items:center">
+        <b>${esc(life)}</b><span class="small">· ${sets.length}세트</span>
+        <button class="ghost" data-addset="${esc(life)}" style="padding:2px 10px;font-size:11px">＋ 세트</button>
       </div>
-      <textarea data-bdesc="${esc(life)}" placeholder="라이프스타일 설명 — 이번 시즌 이 방향을 어떻게 전개할지" style="width:100%;font-size:12px;padding:5px 7px;height:42px;resize:vertical;margin-bottom:10px">${esc(B.desc||'')}</textarea>
-      <div style="display:grid;grid-template-columns:230px 1fr;gap:14px;align-items:start">
-        <div>
-          <div class="small" style="font-weight:800;margin-bottom:5px">② 대표 착장 컷</div>
-          ${rptSlot(life,'hero',null,B.hero,true)}
-          <div style="margin-top:7px">${pal}</div>
-        </div>
-        <div>
-          <div class="small" style="font-weight:800;margin-bottom:5px">① 참고 레퍼런스 <span style="font-weight:400;color:var(--sub)">· AI REFERENCE SUGGESTION · 매트릭스 사진 셀렉/드래그</span></div>
-          ${refGrid}
-        </div>
-      </div>
-      <div class="small" style="font-weight:800;margin:14px 0 6px">③ AI 생성 제품 카드 <span style="font-weight:400;color:var(--sub)">· 메인+서브 뷰 · 트레이/컴퓨터에서 셀렉</span></div>
-      ${cards}
-    </div>`;
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+      ${sets.map((S,si)=>`<div style="border:1px solid var(--line);border-radius:8px;padding:8px;background:#fcfbf8;position:relative">
+          <button data-delset="${esc(life)}" data-si="${si}" style="position:absolute;top:4px;right:4px;border:0;background:transparent;color:var(--sub);cursor:pointer;font-size:13px">✕</button>
+          <div style="display:flex;gap:8px">
+            <div style="flex:0 0 55%">${rptSlot(life,si,'look',null,S.look)}</div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+              ${[0,1,2].map(i=>rptSlot(life,si,'prod',i,(S.prods||[])[i])).join('')}
+            </div>
+          </div>
+          <input data-stitle="${esc(life)}" data-si="${si}" value="${esc(S.title||'')}" placeholder="컨셉명 (예: ALMOND FADE)"
+            style="width:100%;margin-top:8px;font-size:12px;font-weight:700;padding:4px 6px">
+          <textarea data-sdesc="${esc(life)}" data-si="${si}" placeholder="한 줄 설명 — 어떤 트렌드를 반영했는지"
+            style="width:100%;margin-top:5px;font-size:11.5px;padding:4px 6px;height:44px;resize:vertical">${esc(S.desc||'')}</textarea>
+        </div>`).join('')}
+      </div></div>`;
   }).join('');
 }
 
@@ -3321,20 +3261,19 @@ function drawRptTray(){
 }
 document.addEventListener('change',e=>{ if(e.target&&e.target.id==='trayKind')drawRptTray(); });
 
-/* --- 슬롯 채우기 (kind: hero / ref / main / sub) --- */
-function idxParse(v){ return v===''?null:(v==='new'?'new':+v); }
-function rptFill(life,kind,idx,url){
-  const B=rptBlock(life);
-  if(kind==='hero'){ B.hero=url; if(url)rptExtractPalette(life); else { B.palette=[]; drawRptLifes(); } return; }
-  if(kind==='ref'){
-    if(idx==='new'||idx==null){ if(url)B.refs.push(url); }
-    else if(url)B.refs[idx]=url; else B.refs.splice(idx,1);
-    drawRptLifes(); return;
-  }
-  if(kind==='main'||kind==='sub'){
-    B.options[idx]=B.options[idx]||{main:null,sub:null,name:'',desc:''};
-    B.options[idx][kind]=url; drawRptLifes(); return;
-  }
+/* --- 슬롯 채우기 --- */
+function rptSet(life,si){
+  RPT.sets[life]=RPT.sets[life]||[];
+  while(RPT.sets[life].length<=si)RPT.sets[life].push({look:null,prods:[],refs:[]});
+  const S=RPT.sets[life][si]; S.prods=S.prods||[]; S.refs=S.refs||[];
+  return S;
+}
+function rptFill(life,si,kind,pi,url){
+  const S=rptSet(life,si);
+  if(kind==='look')S.look=url;
+  else if(kind==='prod')S.prods[pi]=url;
+  else S.refs[pi]=url;
+  drawRptLifes();
 }
 let TRAY_DRAG=null;
 document.addEventListener('dragstart',e=>{
@@ -3344,31 +3283,33 @@ document.addEventListener('dragstart',e=>{
 document.addEventListener('drop',async e=>{
   const sl=e.target.closest&&e.target.closest('.rslot'); if(!sl)return;
   e.preventDefault(); sl.style.outline='';
-  const life=sl.getAttribute('data-life'), kind=sl.getAttribute('data-kind'), idx=idxParse(sl.getAttribute('data-idx'));
+  const life=sl.getAttribute('data-life'), si=+sl.getAttribute('data-si');
+  const kind=sl.getAttribute('data-kind'), pi=sl.getAttribute('data-pi')===''?null:+sl.getAttribute('data-pi');
   if(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files.length){
-    const f=e.dataTransfer.files[0]; const url=await rptUpload(f);
-    if(url){ rptFill(life,kind,idx,url); if(kind==='hero')rptSetHeroPaletteFromFile(life,f); } return;
+    const url=await rptUpload(e.dataTransfer.files[0]); if(url)rptFill(life,si,kind,pi,url); return;
   }
-  if(TRAY_DRAG){ rptFill(life,kind,idx,TRAY_DRAG); TRAY_DRAG=null; }
+  if(TRAY_DRAG){ rptFill(life,si,kind,pi,TRAY_DRAG); TRAY_DRAG=null; }
 });
 document.addEventListener('click',async e=>{
-  const addc=e.target.getAttribute&&e.target.getAttribute('data-addcard');
-  if(addc){ const B=rptBlock(addc); B.options.push({main:null,sub:null,name:'',desc:''}); drawRptLifes(); return; }
-  const delc=e.target.getAttribute&&e.target.getAttribute('data-delcard');
-  if(delc){ const i=+e.target.getAttribute('data-idx'); (RPT.blocks[delc]&&RPT.blocks[delc].options||[]).splice(i,1); drawRptLifes(); return; }
+  const add=e.target.getAttribute&&e.target.getAttribute('data-addset');
+  if(add){ RPT.sets[add]=RPT.sets[add]||[]; RPT.sets[add].push({look:null,prods:[],refs:[]}); drawRptLifes(); return; }
+  const dels=e.target.getAttribute&&e.target.getAttribute('data-delset');
+  if(dels){ const i=+e.target.getAttribute('data-si'); (RPT.sets[dels]||[]).splice(i,1); drawRptLifes(); return; }
   const sl=e.target.closest&&e.target.closest('.rslot'); if(!sl)return;
-  const life=sl.getAttribute('data-life'), kind=sl.getAttribute('data-kind'), idx=idxParse(sl.getAttribute('data-idx'));
-  if(e.target.getAttribute('data-clr')){ e.stopPropagation(); rptFill(life,kind,idx,null); return; }
+  const life=sl.getAttribute('data-life'), si=+sl.getAttribute('data-si');
+  const kind=sl.getAttribute('data-kind'), pi=sl.getAttribute('data-pi')===''?null:+sl.getAttribute('data-pi');
+  if(e.target.getAttribute('data-clr')){ e.stopPropagation(); rptFill(life,si,kind,pi,null); return; }
   const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
-  inp.onchange=async()=>{ if(inp.files&&inp.files[0]){ const f=inp.files[0]; const url=await rptUpload(f); if(url){ rptFill(life,kind,idx,url); if(kind==='hero')rptSetHeroPaletteFromFile(life,f); } } };
+  inp.onchange=async()=>{ if(inp.files&&inp.files[0]){ const url=await rptUpload(inp.files[0]); if(url)rptFill(life,si,kind,pi,url); } };
   inp.click();
 });
 document.addEventListener('input',e=>{
-  const el=e.target; if(!el.getAttribute)return;
-  const tag=el.getAttribute('data-btag'), ttl=el.getAttribute('data-btitle'), dsc=el.getAttribute('data-bdesc');
-  if(tag||ttl||dsc){ const life=tag||ttl||dsc; const B=rptBlock(life); if(tag)B.tag=el.value; else if(ttl)B.title=el.value; else B.desc=el.value; return; }
-  const on=el.getAttribute('data-oname'), od=el.getAttribute('data-odesc');
-  if(on||od){ const life=on||od, i=+el.getAttribute('data-idx'); const B=rptBlock(life); B.options[i]=B.options[i]||{main:null,sub:null,name:'',desc:''}; if(on)B.options[i].name=el.value; else B.options[i].desc=el.value; }
+  const t=e.target.getAttribute&&e.target.getAttribute('data-stitle');
+  const d=e.target.getAttribute&&e.target.getAttribute('data-sdesc');
+  if(!t&&!d)return;
+  const life=t||d, si=+e.target.getAttribute('data-si');
+  const S=rptSet(life,si);
+  if(t)S.title=e.target.value; else S.desc=e.target.value;
 });
 async function rptUpload(f){
   const st=$('#rptStat'); st.textContent='업로드 중…';
@@ -3385,10 +3326,10 @@ async function rptUpload(f){
 $('#btnRptSave').onclick=async()=>{
   const st=$('#rptStat'); st.textContent='저장 중…';
   try{
-    let cfg={}; try{const r=await sel('app_config','select=value&key=eq.'+RPT_BLK_KEY);cfg=(r[0]&&r[0].value)||{};}catch(_){}
-    cfg[rptCfgKey()]=RPT.blocks;
-    await upsert('app_config',[{key:RPT_BLK_KEY,value:cfg}],'key');
-    st.textContent='저장 완료 — viewer 리포트에 반영됩니다.';
+    const cfg=await rptLoadCfg();
+    cfg[rptCfgKey()]=RPT.sets;
+    await upsert('app_config',[{key:RPT_KEY,value:cfg}],'key');
+    st.textContent='저장 완료.';
   }catch(e){ st.textContent='저장 실패: '+e.message; }
 };
 
@@ -3405,13 +3346,13 @@ $('#btnRptExport').onclick=async()=>{
     }catch(e){ res(null); } };
     im.onerror=()=>res(null); im.src=url;
   });
-  const blockOf=l=>RPT.blocks[l]||{};
-  const nonEmpty=B=>B.hero||(B.refs||[]).filter(Boolean).length||(B.options||[]).some(o=>o&&(o.main||o.sub));
-  const lifes=rptLifes().filter(l=>nonEmpty(blockOf(l)));
-  const cache={}; let n=0; const urls=[];
-  lifes.forEach(l=>{const B=blockOf(l); if(B.hero)urls.push([B.hero,1100]); (B.refs||[]).forEach(u=>u&&urls.push([u,560])); (B.options||[]).forEach(o=>{if(o){if(o.main)urls.push([o.main,900]);if(o.sub)urls.push([o.sub,560]);}});});
-  const tot=urls.length;
-  for(const [u,w] of urls){ if(u&&!cache[u]){ cache[u]=await shrink(u,w)||u; st.textContent=`이미지 ${++n}/${tot}…`; } }
+  const lifes=rptLifes().filter(l=>(RPT.sets[l]||[]).some(S=>S.look||(S.prods||[]).filter(Boolean).length||false));
+  const cache={}; let n=0, tot=0;
+  lifes.forEach(l=>(RPT.sets[l]||[]).forEach(S=>{ tot+=1+(S.prods||[]).filter(Boolean).length; }));
+  for(const life of lifes)for(const S of (RPT.sets[life]||[])){
+    if(S.look&&!cache[S.look]){ cache[S.look]=await shrink(S.look,1100)||S.look; st.textContent=`이미지 ${++n}/${tot}…`; }
+    for(const u of (S.prods||[])) if(u&&!cache[u]){ cache[u]=await shrink(u,520)||u; st.textContent=`이미지 ${++n}/${tot}…`; }
+  }
   // 트렌드 요약
   const arts=RPT.trend.filter(t=>t.coverage_group!=='MACRO');
   const kw={};
@@ -3439,34 +3380,18 @@ $('#btnRptExport').onclick=async()=>{
   th,td{border:1px solid var(--line);padding:8px 10px;text-align:center}
   th{background:#FAFAFB;font-weight:800}
   td.rowh{text-align:left;font-weight:800;background:#FAFAFB}
-  .life{padding:44px 0;border-bottom:1px solid var(--line)}
-  .life-tag{font-size:11.5px;font-weight:800;color:var(--accent);letter-spacing:.6px;text-transform:uppercase}
-  .life h2{margin:6px 0 2px;font-size:26px;font-weight:900;letter-spacing:-.4px}
-  .life-title{font-size:15px;font-weight:700;color:#333;margin-top:2px}
-  .life-desc{margin:8px 0 0;color:var(--sub);font-size:14px;max-width:760px;line-height:1.5}
-  .life-top{display:grid;grid-template-columns:300px 1fr;gap:24px;margin-top:22px;align-items:start}
-  .hero-cut{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#FAFAFB;aspect-ratio:3/4}
-  .hero-cut img{width:100%;height:100%;object-fit:cover;display:block}
-  .pal{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:12px}
-  .pal span{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--sub)}
-  .sw{width:16px;height:16px;border-radius:4px;border:1px solid var(--line)}
-  .ref-hd{font-size:12px;font-weight:800;color:var(--sub);letter-spacing:.4px;margin-bottom:10px}
-  .refs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-  .refs .t{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#FAFAFB;aspect-ratio:1/1}
-  .refs .t img{width:100%;height:100%;object-fit:cover;display:block}
-  .opt-hd{margin:26px 0 12px;font-size:13px;font-weight:800;color:var(--sub);letter-spacing:.5px}
-  .opts{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-  .opt{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fff;box-shadow:0 4px 20px rgba(17,18,20,.04)}
-  .opt-media{display:grid;grid-template-columns:2fr 1fr;gap:2px;background:var(--line)}
-  .opt-media .m{aspect-ratio:1/1;background:#FAFAFB;overflow:hidden}
-  .opt-media .m img{width:100%;height:100%;object-fit:cover;display:block}
-  .opt-media .s img{object-fit:contain}
-  .opt-body{padding:12px 14px 16px}
-  .opt-no{font-size:11px;font-weight:800;color:var(--accent)}
-  .opt-name{margin:3px 0 4px;font-size:15px;font-weight:800;letter-spacing:-.2px}
-  .opt-desc{font-size:12.5px;color:var(--sub);line-height:1.5}
-  @media(max-width:900px){.wrap{padding:0 18px}.life-top{grid-template-columns:1fr}.opts{grid-template-columns:1fr}.hero h1{font-size:28px}}
-  @media print{section,.life{break-inside:avoid}.opt{break-inside:avoid}}`;
+  .sets{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
+  .set{border:1px solid var(--line);border-radius:16px;padding:14px;background:#fff;box-shadow:0 4px 20px rgba(17,18,20,.04)}
+  .set-top{display:grid;grid-template-columns:1.35fr 1fr;gap:12px}
+  .look{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#FAFAFB;aspect-ratio:3/4}
+  .look img{width:100%;height:100%;object-fit:cover;display:block}
+  .prods{display:flex;flex-direction:column;gap:10px}
+  .prod{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#FAFAFB;aspect-ratio:4/3}
+  .prod img{width:100%;height:100%;object-fit:contain;display:block}
+  .set-title{margin:12px 0 4px;font-size:15px;font-weight:800;letter-spacing:-.2px}
+  .set-desc{font-size:13px;color:var(--sub);line-height:1.45}
+  @media(max-width:900px){.wrap{padding:0 18px}.sets{grid-template-columns:1fr}.hero h1{font-size:28px}}
+  @media print{section{break-inside:avoid}.set{break-inside:avoid}}`;
 
   const body=`<div class="hero"><div class="wrap">
       <span class="badge">${esc(CUR_BRAND)} · ${esc(planKeyNow())} · ${esc(CUR_CAT)}</span>
@@ -3488,27 +3413,20 @@ $('#btnRptExport').onclick=async()=>{
         return `<td style="background:rgba(196,90,74,${v?(0.06+0.3*v/maxN).toFixed(3):0})">${v||'—'}</td>`;}).join('')}</tr>`).join('')}
       </tbody></table></div></section>
 
-    ${lifes.map((life,li)=>{const B=blockOf(life);
-      const refs=(B.refs||[]).filter(Boolean);
-      const opts=(B.options||[]).filter(o=>o&&(o.main||o.sub||o.name||o.desc));
-      const pal=(B.palette||[]).map(hx=>`<span><span class="sw" style="background:${esc(hx)}"></span>${esc(nameOfHex(hx))}</span>`).join('');
-      return `<section class="life"><div class="wrap">
-      <div class="life-tag">${String(li+3).padStart(2,'0')} · ${esc(B.tag||life)}</div>
-      <h2>${esc(B.title||life)}</h2>${B.title?`<div class="life-title">${esc(life)}</div>`:''}
-      ${B.desc?`<p class="life-desc">${esc(B.desc)}</p>`:''}
-      ${refs.length?`<div class="opt-hd">① AI REFERENCE SUGGESTION · 참고 레퍼런스 ${refs.length}컷</div>
-        <div class="refs">${refs.map(u=>`<div class="t"><img src="${cache[u]||u}"></div>`).join('')}</div>`:''}
-      <div class="life-top">
-        <div><div class="ref-hd">② 대표 착장 컷</div>
-          <div class="hero-cut">${B.hero?`<img src="${cache[B.hero]||B.hero}">`:''}</div>
-          ${pal?`<div class="pal">${pal}</div>`:''}</div>
-        <div>${opts.length?`<div class="opt-hd" style="margin-top:0">③ AI 생성 제품 · ${opts.length}종</div>
-          <div class="opts">${opts.map((o,oi)=>`<div class="opt">
-            <div class="opt-media"><div class="m">${o.main?`<img src="${cache[o.main]||o.main}">`:''}</div><div class="m s">${o.sub?`<img src="${cache[o.sub]||o.sub}">`:''}</div></div>
-            <div class="opt-body"><div class="opt-no">OPTION ${String(oi+1).padStart(2,'0')}</div>
-              <div class="opt-name">${esc(o.name||'')}</div>${o.desc?`<div class="opt-desc">${esc(o.desc)}</div>`:''}</div>
-          </div>`).join('')}</div>`:'<div class="sub">AI 생성 제품 카드가 아직 없습니다.</div>'}</div>
-      </div></div></section>`;}).join('')}`;
+    ${lifes.map((life,li)=>`<section><div class="wrap">
+      <div class="sec-badge">${String(li+3).padStart(2,'0')} STYLE</div><h2>${esc(life)}</h2>
+      <p class="sub">착장 1 + 참고 3</p>
+      <div class="sets">
+      ${(RPT.sets[life]||[]).filter(S=>S.look||(S.prods||[]).filter(Boolean).length||S.title).map(S=>`
+        <div class="set">
+          <div class="set-top">
+            <div class="look">${S.look?`<img src="${cache[S.look]}">`:''}</div>
+            <div class="prods">${[0,1,2].map(i=>{const u=(S.prods||[])[i];return `<div class="prod">${u?`<img src="${cache[u]}">`:''}</div>`;}).join('')}</div>
+          </div>
+          ${S.title?`<div class="set-title">${esc(S.title)}</div>`:''}
+          ${S.desc?`<div class="set-desc">${esc(S.desc)}</div>`:''}
+        </div>`).join('')}
+      </div></div></section>`).join('')}`;
 
   const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
