@@ -53,7 +53,7 @@ progress{width:100%;height:8px}
 </head>
 <body>
 <header>
-  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-173</span></h1>
+  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-174</span></h1>
   <div id="scopeBar" class="hide" style="display:flex;gap:6px;align-items:center;margin-left:16px">
     <select id="selBrand" style="padding:4px 6px;font-size:12px"></select>
     <span style="opacity:.4">›</span>
@@ -3139,6 +3139,7 @@ $('#btnSaveSnap').onclick=()=>saveSnapshot(false);
 
 /* ============ 05 승인 ============ */
 /* ================= 05 리포트 편집기 ================= */
+const EXP_KW_KO={comfort:'컴포트·편안함',tall_boot:'롱부츠',slouch_biker:'슬라우치 바이커',texture_plush:'퍼·플러시',brown_suede:'브라운 스웨이드',almond_soft_square:'아몬드·소프트 스퀘어 토',block_lowheel:'블록 로우힐',pointed_toe:'포인티드 토',dress_shoe:'드레스 슈즈',high_vamp:'하이뱀프',slipper_mule:'슬리퍼·뮬',animal_exotic:'애니멀·엑조틱',color_accent:'컬러 액센트',slim_sneaker:'슬림 스니커',technical_sneaker:'테크니컬 스니커',statement_sneaker:'스테이트먼트 스니커',two_tone:'투톤',embellishment:'장식·엠벨리시',heritage_hybrid:'헤리티지 하이브리드',market_signal:'시장 신호',dress_revival:'드레스 슈즈 복귀'};
 let RPT={snap:null,sets:{},tray:[],trend:[],matrix:null};
 const RPT_KEY='report_layout';
 
@@ -3159,8 +3160,8 @@ $('#btnRptLoad').onclick=async()=>{
     RPT.snap=(snaps||[]).find(x=>(x.project===pj)&&(x.planning_season===plan))||null;
 
     // 2) 트렌드(현 프로젝트·시즌)
-    const tr=await sel('trend_items','select=id,article_title,summary_ko,coverage_group,season_key,project&project=eq.'+encodeURIComponent(pj)+'&limit=800');
-    RPT.trend=(tr||[]).filter(t=>!t.season_key||t.season_key===plan).filter(t=>t.coverage_group!=='KWMAP');
+    const tr=await sel('trend_items','select=*&project=eq.'+encodeURIComponent(pj)+'&limit=1500');
+    RPT.trend=(tr||[]).filter(t=>!t.season_key||t.season_key===plan);
 
     // 3) 생성물 + 레퍼런스 트레이
     RPT.tray=[];
@@ -3348,16 +3349,23 @@ $('#btnRptExport').onclick=async()=>{
   });
   const lifes=rptLifes().filter(l=>(RPT.sets[l]||[]).some(S=>S.look||(S.prods||[]).filter(Boolean).length||false));
   const cache={}; let n=0, tot=0;
+  for(const t of RPT.trend) if(t.img&&!cache[t.img]) cache[t.img]=await shrink(t.img,420)||t.img;
   lifes.forEach(l=>(RPT.sets[l]||[]).forEach(S=>{ tot+=1+(S.prods||[]).filter(Boolean).length; }));
   for(const life of lifes)for(const S of (RPT.sets[life]||[])){
     if(S.look&&!cache[S.look]){ cache[S.look]=await shrink(S.look,1100)||S.look; st.textContent=`이미지 ${++n}/${tot}…`; }
     for(const u of (S.prods||[])) if(u&&!cache[u]){ cache[u]=await shrink(u,520)||u; st.textContent=`이미지 ${++n}/${tot}…`; }
   }
-  // 트렌드 요약
-  const arts=RPT.trend.filter(t=>t.coverage_group!=='MACRO');
-  const kw={};
-  arts.forEach(t=>String(t.summary_ko||'').split(/[^A-Za-z가-힣_]+/).forEach(w=>{ if(w.length>2)kw[w]=(kw[w]||0)+1; }));
-  const topKw=Object.entries(kw).sort((a,b)=>b[1]-a[1]).slice(0,14);
+  // 트렌드 — 이전 리포트와 동일한 구조(경향 문장 + 통합 매크로 + 워드클라우드 + 대표 이미지)
+  const macros=RPT.trend.filter(t=>t.coverage_group==='MACRO');
+  const kwmapRow=RPT.trend.find(t=>t.coverage_group==='KWMAP');
+  let KWMAP={}; if(kwmapRow){try{KWMAP=(JSON.parse(kwmapRow.summary_ko||'{}').ko)||{};}catch(_){}}
+  const kwko=w=>KWMAP[w]||EXP_KW_KO[w]||w;
+  const arts=RPT.trend.filter(t=>t.coverage_group!=='MACRO'&&t.coverage_group!=='KWMAP');
+  const tally=a=>{const m={};a.forEach(x=>{if(x==null||x==='')return;m[x]=(m[x]||0)+1;});return Object.entries(m).sort((x,y)=>y[1]-x[1]);};
+  const kwFreq=tally(arts.flatMap(t=>String(t.trend_keywords||'').split(/[|,]/).map(z=>z.trim()).filter(Boolean)));
+  const phaseFreq=tally(arts.map(t=>t.season).filter(Boolean));
+  const topKw=kwFreq.slice(0,6).map(([w,n])=>`${kwko(w)}(${n})`);
+  const trendImgs=arts.filter(t=>t.img).slice(0,12);
   const cells=(RPT.snap&&RPT.snap.computed&&RPT.snap.computed.cells)||{};
   const ck=Object.keys(cells);
   const lines=[...new Set(ck.map(k=>k.split('|')[0]))], dnas=[...new Set(ck.map(k=>k.split('|')[1]))];
@@ -3388,6 +3396,19 @@ $('#btnRptExport').onclick=async()=>{
   .prods{display:flex;flex-direction:column;gap:10px}
   .prod{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#FAFAFB;aspect-ratio:4/3}
   .prod img{width:100%;height:100%;object-fit:contain;display:block}
+  .read{border-left:3px solid var(--accent);background:#FCFAF9;padding:12px 16px;border-radius:0 10px 10px 0;font-size:14.5px;line-height:1.6;color:#4a4542}
+  .mt-lab{margin:22px 0 8px;font-size:13px;font-weight:800}
+  .macro-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .macro{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff}
+  .macro-t{font-weight:800;font-size:14px;color:var(--accent)}
+  .macro-ko{font-size:13.5px;margin-top:3px;font-weight:700}
+  .macro-d{font-size:13px;color:var(--sub);line-height:1.5;margin-top:6px}
+  .macro-link{margin-top:8px;font-size:12px;font-weight:700;color:var(--accent)}
+  .tgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .tfig{margin:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#FAFAFB}
+  .tfig img{width:100%;height:120px;object-fit:cover;display:block}
+  .tfig figcaption{padding:6px 8px;font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  @media(max-width:900px){.macro-grid{grid-template-columns:1fr}.tgrid{grid-template-columns:repeat(2,1fr)}}
   .set-title{margin:12px 0 4px;font-size:15px;font-weight:800;letter-spacing:-.2px}
   .set-desc{font-size:13px;color:var(--sub);line-height:1.45}
   @media(max-width:900px){.wrap{padding:0 18px}.sets{grid-template-columns:1fr}.hero h1{font-size:28px}}
@@ -3399,10 +3420,26 @@ $('#btnRptExport').onclick=async()=>{
       <p>트렌드 반영 · 확정 매트릭스 · 라이프스타일별 스타일 제안</p></div></div>
 
     <section><div class="wrap">
-      <div class="sec-badge">01 TREND</div><h2>트렌드 반영</h2>
-      <p class="sub">이번 시즌 자료 ${arts.length}건에서 반복 신호를 뽑았습니다.</p>
-      <div class="chips">${topKw.map(([w,c])=>`<span class="chip">${esc(w)} <b style="color:var(--accent)">${c}</b></span>`).join('')||'<span class="chip">자료 없음</span>'}</div>
-      <div class="sub" style="margin-top:16px;max-height:none">${arts.slice(0,12).map(t=>`· ${esc(String(t.article_title||'').slice(0,90))}`).join('<br>')}</div>
+      <div class="sec-badge">01 TREND</div><h2>트렌드 흐름 — 이번 시즌 경향</h2>
+      <div class="read"><b>이번 시즌 경향 —</b> 자료 ${arts.length}건에서 가장 많이 잡힌 흐름은 <b>${topKw.slice(0,3).join(' · ')}</b>입니다.
+        ${topKw.length>3?`이어서 ${topKw.slice(3).join(' · ')} 순으로 나타납니다. `:''}
+        ${phaseFreq.length?`자료는 ${phaseFreq.slice(0,3).map(([p,n])=>`${esc(p)} ${n}건`).join(' · ')} 중심입니다.`:''}</div>
+      ${macros.length?`<div class="mt-lab">${macros.length}개 통합 트렌드 <span style="font-weight:400;color:var(--sub)">· 리포트 매크로</span></div>
+      <div class="macro-grid">${macros.map(m=>{
+        const parts=String(m.summary_ko||'').split('||');
+        const ko=parts[0]||'', dir=parts[1]||'', linesC=(parts[2]||'').split(',').filter(Boolean);
+        const codes=String(m.trend_keywords||'').split('|').filter(Boolean).slice(0,5);
+        return `<div class="macro">
+          <div class="macro-t">${esc(m.article_title||'')}</div>
+          ${ko?`<div class="macro-ko">${esc(ko)}</div>`:''}
+          ${dir?`<div class="macro-d">${esc(dir)}</div>`:''}
+          ${codes.length?`<div class="chips" style="margin-top:8px">${codes.map(c=>`<span class="chip">${esc(kwko(c))}</span>`).join('')}</div>`:''}
+          ${linesC.length?`<div class="macro-link">→ 연결 매트릭스: ${esc(linesC.join(' · '))}</div>`:''}
+        </div>`;}).join('')}</div>`:''}
+      ${kwFreq.length?`<div class="mt-lab">키워드 <span style="font-weight:400;color:var(--sub)">· 많이 잡힌 순</span></div>
+      <div class="chips">${kwFreq.slice(0,40).map(([w,n])=>`<span class="chip">${esc(kwko(w))} <b style="color:var(--accent)">${n}</b></span>`).join('')}</div>`:''}
+      ${trendImgs.length?`<div class="mt-lab">경향 대표 이미지</div>
+      <div class="tgrid">${trendImgs.map(t=>`<figure class="tfig"><img src="${cache[t.img]||t.img}"><figcaption>${esc(String(t.article_title||'').slice(0,44))}</figcaption></figure>`).join('')}</div>`:''}
     </div></section>
 
     <section><div class="wrap">
