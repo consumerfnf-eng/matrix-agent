@@ -141,18 +141,20 @@ function wordcloud(freq,{max=40}={}){
 async function reloadAll(){
   $('#body').innerHTML='<div class="card"><div class="empty">불러오는 중…</div></div>';
   // 트렌드·이미지는 스냅샷 유무와 무관하게 항상 로드(올린 트렌드가 바로 보이도록)
-  const [snaps,prods,trendsRaw,cads,srcs]=await Promise.all([
+  const [snaps,prods,trendsRaw,cads,srcs,lookCfg]=await Promise.all([
     sel('matrix_snapshots','status=eq.APPROVED&order=approved_at.desc,created_at.desc&limit=40&select=*'),
     sel('products','select=model_key,storage_path,image_url&limit=8000'),
     sel('trend_items','select=article_title,publisher,summary_ko,trend_keywords,og_image_url,source_url,season,coverage_group,confidence,source_id,project&order=created_at.desc&limit=1000'),
     sel('cad_refs','select=subcategory,public_url').catch(()=>[]),
-    sel('sources','select=id,project').catch(()=>[])
+    sel('sources','select=id,project').catch(()=>[]),
+    sel('app_config','select=value&key=eq.look_layout').catch(()=>[])
   ]);
   const imgMap={}; prods.forEach(p=>{imgMap[p.model_key]=p.storage_path?pub(p.storage_path):(p.image_url||'')});
   window.CADV={}; (cads||[]).forEach(c=>{if(c.public_url)window.CADV[String(c.subcategory||'').replace(/[\s_]/g,'').toLowerCase()]=c.public_url;});
   // 소스 → 프로젝트 맵 (트렌드를 프로젝트별로 거르기 위함)
   const S2P={}; (srcs||[]).forEach(s=>{S2P[s.id]=s.project||'MLB|SHOES';});
   window._S2P=S2P; window._trendsRaw=trendsRaw;
+  window.LOOK_LAYOUT=(lookCfg&&lookCfg[0]&&lookCfg[0].value)||{};
   // 프로젝트별 최신 승인본 1개씩(같은 27FW라도 MLB/DUVETICA 섞이지 않게)
   // 프로젝트 + 기획시즌 조합별 최신 승인본 1개씩 (27FW / 27SS 가 따로 뜨게)
   const perProj={}; (snaps||[]).forEach(s=>{
@@ -214,6 +216,10 @@ function lifeState(lk){
   const d=LIFE_DATA[lk]; if(!d)return {on:[],main:null,off:[]};
   const all=d.items.map(x=>x.img);
   let st=loadLifeState(lk);
+  if(!st){                                   // 관리자가 저장한 공유 배치 우선
+    const sv=(window.LOOK_LAYOUT||{})[(DATA&&DATA.snap?DATA.snap.id:'')+'|'+d.life];
+    if(sv)st={on:(sv.on||[]).slice(),off:(sv.off||[]).slice(),main:sv.main||null};
+  }
   if(!st||!Array.isArray(st.on))st={on:all.slice(),off:[],main:all[0]||null};
   st.off=st.off||[];
   st.on=st.on.filter(u=>all.includes(u));
@@ -223,7 +229,7 @@ function lifeState(lk){
 }
 function lifeCell(lk,u,big){
   const d=LIFE_DATA[lk]; const it=(d.items.find(x=>x.img===u))||{sub:''}; const editing=!!EDIT_ON[lk];
-  return `<div style="position:relative">
+  return `<div style="position:relative" data-cell="${esc(u)}" data-lk="${lk}" draggable="${editing}">
     <div style="width:100%;aspect-ratio:3/4;background:#f4f1ef;border-radius:8px;overflow:hidden;border:1px solid var(--line);cursor:zoom-in" onclick="hoverPrev('${esc(u)}')">
       <img src="${esc(u)}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.parentNode.style.opacity=.3"></div>
     <div class="small" style="margin-top:4px;color:var(--sub);display:flex;justify-content:space-between;gap:6px;align-items:center">
@@ -262,11 +268,63 @@ function toggleEdit(lk,btn){
   EDIT_ON[lk]=!EDIT_ON[lk];
   if(btn)btn.textContent=EDIT_ON[lk]?'편집 끝':'사진 편집';
   const hint=document.querySelector('[data-edithint="'+lk+'"]'); if(hint)hint.style.display=EDIT_ON[lk]?'':'none';
+  const upl=document.querySelector('[data-upl="'+lk+'"]'); if(upl)upl.style.display=EDIT_ON[lk]?'':'none';
   drawLife(lk);
 }
 function lookOff(lk,u){const st=lifeState(lk);st.on=st.on.filter(x=>x!==u);st.off=(st.off||[]).concat([u]);if(st.main===u)st.main=st.on[0]||null;saveLifeState(lk,st);drawLife(lk);}
 function lookOn(lk,u){const st=lifeState(lk);if(!st.on.includes(u))st.on.push(u);st.off=(st.off||[]).filter(x=>x!==u);if(!st.main)st.main=u;saveLifeState(lk,st);drawLife(lk);}
 function lookMain(lk,u){const st=lifeState(lk);st.main=u;saveLifeState(lk,st);drawLife(lk);}
+function addLifeImages(lk,files){
+  const d=LIFE_DATA[lk]; if(!d)return;
+  const st=lifeState(lk);
+  let pending=files.length;
+  [...files].forEach(f=>{
+    const r=new FileReader();
+    r.onload=()=>{
+      const url=r.result;
+      d.items.push({img:url,sub:'내 사진',idx:d.items.length,mine:true});
+      st.on.push(url);
+      if(!st.main)st.main=url;
+      if(--pending===0){ saveLifeState(lk,st); saveMine(lk,d); drawLife(lk); }
+    };
+    r.onerror=()=>{ if(--pending===0){ saveLifeState(lk,st); drawLife(lk); } };
+    r.readAsDataURL(f);
+  });
+}
+function mineKey(lk){return 'mx_mine_'+((DATA&&DATA.snap&&DATA.snap.id)?DATA.snap.id:'x')+'_'+lk;}
+function saveMine(lk,d){
+  try{localStorage.setItem(mineKey(lk),JSON.stringify(d.items.filter(x=>x.mine)));}
+  catch(e){ const h=document.querySelector('[data-edithint="'+lk+'"]'); if(h)h.textContent='사진이 커서 이번 세션에만 유지됩니다.'; }
+}
+function loadMine(lk){
+  try{return JSON.parse(localStorage.getItem(mineKey(lk)))||[];}catch(e){return [];}
+}
+document.addEventListener('change',e=>{
+  const lk=e.target&&e.target.getAttribute&&e.target.getAttribute('data-uplin');
+  if(lk&&e.target.files&&e.target.files.length){ addLifeImages(lk,e.target.files); e.target.value=''; }
+});
+/* 드래그로 순서 변경 */
+let DRAG={lk:null,img:null};
+document.addEventListener('dragstart',e=>{
+  const c=e.target.closest&&e.target.closest('[data-cell]');
+  if(!c)return;
+  DRAG={lk:c.getAttribute('data-lk'),img:c.getAttribute('data-cell')};
+  e.dataTransfer.effectAllowed='move';
+  try{e.dataTransfer.setData('text/plain',DRAG.img);}catch(_){}
+});
+document.addEventListener('dragover',e=>{ if(DRAG.img&&e.target.closest&&e.target.closest('[data-cell]')) e.preventDefault(); });
+document.addEventListener('drop',e=>{
+  const c=e.target.closest&&e.target.closest('[data-cell]');
+  if(!c||!DRAG.img)return;
+  e.preventDefault();
+  const lk=c.getAttribute('data-lk'); if(lk!==DRAG.lk)return;
+  const target=c.getAttribute('data-cell');
+  const st=lifeState(lk);
+  const from=st.on.indexOf(DRAG.img), to=st.on.indexOf(target);
+  if(from<0||to<0||from===to){DRAG={lk:null,img:null};return;}
+  st.on.splice(to,0,st.on.splice(from,1)[0]);
+  saveLifeState(lk,st); DRAG={lk:null,img:null}; drawLife(lk);
+});
 function drawAllLives(){Object.keys(LIFE_DATA).forEach(drawLife);}
 function render(){
   const {comp,cells,props,trends,macros}=DATA;
@@ -410,12 +468,16 @@ function render(){
       h+=`<div class="card" data-lifeblock="${lk}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
         <div style="font-weight:800;font-size:16px">${esc(life)} <span class="small" style="opacity:.6">· <span data-cnt="${lk}">${arr.length}</span>착장</span></div>
         <button class="btn" style="padding:2px 10px;font-size:12px" onclick="toggleEdit('${lk}',this)">사진 편집</button>
-        <span class="small" data-edithint="${lk}" style="display:none;color:var(--sub)">사진 위 ★ = 대표컷으로, × = 빼기 · 뺀 사진은 아래 목록에서 다시 넣기</span>
+        <label data-upl="${lk}" style="display:none;cursor:pointer;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:3px 9px;background:#fff">＋ 내 사진 추가<input type="file" accept="image/*" multiple data-uplin="${lk}" style="display:none"></label>
+        <span class="small" data-edithint="${lk}" style="display:none;color:var(--sub)">★ 대표컷 · × 빼기 · ↔ 드래그로 순서 변경 · 뺀 사진은 아래에서 다시 넣기</span>
       </div>
       <div data-stage="${lk}"></div>
       <div data-pool="${lk}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)"></div>
       </div>`;
       LIFE_DATA[lk]={life:life,items:arr.map((s2,i)=>({img:s2.img,sub:s2.sub||'',idx:i}))};
+      const _sv=(window.LOOK_LAYOUT||{})[(snap&&snap.id)+'|'+life];
+      if(_sv&&_sv.mine)_sv.mine.forEach(u=>{ if(!LIFE_DATA[lk].items.some(x=>x.img===u))LIFE_DATA[lk].items.push({img:u,sub:'',mine:true}); });
+      loadMine(lk).forEach(x=>{ if(!LIFE_DATA[lk].items.some(y=>y.img===x.img))LIFE_DATA[lk].items.push(x); });
     });
   }
   // ⑦ 제품컷 — 맨 아래 "제품컷 보기"로 펼치면 제품샷이 쭉(라이프별)
