@@ -68,7 +68,7 @@ a.src{color:var(--coral2);text-decoration:none;font-size:12px}
       </div>
     </div>
     <div class="stats" id="hStats"></div>
-    <div class="rail"><div>① 트렌드 흐름</div><div>② 매트릭스(카테고리×DNA)</div><div>③ 강세·공백 판정</div><div>④ 전체 구성비율</div><div>⑤ 스타일 추천</div></div>
+    <div class="rail"><div>① 트렌드 흐름</div><div>② 매트릭스(카테고리×DNA)</div><div>③ 강세·공백 판정</div><div>④ 전체 구성비율</div><div>⑤ 스타일 제안(라이프스타일별)</div></div>
     <div class="upd" id="hUpd"></div>
   </div>
   <div id="body"></div>
@@ -141,14 +141,16 @@ function wordcloud(freq,{max=40}={}){
 async function reloadAll(){
   $('#body').innerHTML='<div class="card"><div class="empty">불러오는 중…</div></div>';
   // 트렌드·이미지는 스냅샷 유무와 무관하게 항상 로드(올린 트렌드가 바로 보이도록)
-  const [snaps,prods,trendsRaw,cads,srcs,lookCfg]=await Promise.all([
+  const [snaps,prods,trendsRaw,cads,srcs,lookCfg,blkCfg]=await Promise.all([
     sel('matrix_snapshots','status=eq.APPROVED&order=approved_at.desc,created_at.desc&limit=40&select=*'),
     sel('products','select=model_key,storage_path,image_url&limit=8000'),
     sel('trend_items','select=article_title,publisher,summary_ko,trend_keywords,og_image_url,source_url,season,coverage_group,confidence,source_id,project&order=created_at.desc&limit=1000'),
     sel('cad_refs','select=subcategory,public_url').catch(()=>[]),
     sel('sources','select=id,project').catch(()=>[]),
-    sel('app_config','select=value&key=eq.look_layout').catch(()=>[])
+    sel('app_config','select=value&key=eq.look_layout').catch(()=>[]),
+    sel('app_config','select=value&key=eq.report_blocks').catch(()=>[])
   ]);
+  window.REPORT_BLOCKS=(blkCfg&&blkCfg[0]&&blkCfg[0].value)||{};
   const imgMap={}; prods.forEach(p=>{imgMap[p.model_key]=p.storage_path?pub(p.storage_path):(p.image_url||'')});
   window.CADV={}; (cads||[]).forEach(c=>{if(c.public_url)window.CADV[String(c.subcategory||'').replace(/[\s_]/g,'').toLowerCase()]=c.public_url;});
   // 소스 → 프로젝트 맵 (트렌드를 프로젝트별로 거르기 위함)
@@ -206,7 +208,10 @@ async function pickProject(pj){
   const kwmapRow=raw.find(t=>t.coverage_group==='KWMAP');
   window.KWKO=Object.assign({},KW_KO); if(kwmapRow){try{const m=JSON.parse(kwmapRow.summary_ko||'{}');Object.assign(window.KWKO,m.ko||{});}catch(_){}}
   const trends=raw.filter(t=>t.coverage_group!=='MACRO'&&t.coverage_group!=='KWMAP');
-  DATA={snap,comp,cells,props,imgMap,trends,macros};
+  // 관리자 05 편집기에서 확정한 라이프스타일 블록 (snapId::project::plan)
+  let blocks={};
+  if(snap){ const bkey=snap.id+'::'+_pjBase+'::'+(_plan||''); blocks=(window.REPORT_BLOCKS||{})[bkey]||{}; }
+  DATA={snap,comp,cells,props,imgMap,trends,macros,blocks};
   const _pp=String(pj).split('|');
   const brand=comp.brand||_pp[0], cat=comp.category||(_pp[1]||'');
   const isOuter=String(cat).toUpperCase()!=='SHOES';
@@ -503,6 +508,22 @@ async function exportReport(){
   setTxt(`📄 리포트 내보내기(HTML) · ${mb}MB 저장됨`);
 }
 function drawAllLives(){Object.keys(LIFE_DATA).forEach(drawLife);}
+/* ===== 색 이름 근사 + 팔레트 자동추출(팔레트 미저장 블록 폴백) ===== */
+const CNAMES=[['Ivory','#F5F1E6'],['White','#FFFFFF'],['Cream','#F3E9D2'],['Beige','#E8DBC5'],['Sand','#D8C3A5'],['Camel','#C19A6B'],['Tan','#B08D57'],['Brown','#7B5B3F'],['Chocolate','#4B3621'],['Black','#1A1A1A'],['Charcoal','#3A3A3A'],['Gray','#9A9A9A'],['Silver','#C8C8C8'],['Navy','#26324D'],['Blue','#3A5A8C'],['Powder Blue','#AEC6E0'],['Sky','#8EC5E8'],['Teal','#3E8E8A'],['Sage','#9CA98B'],['Green','#4E7A5A'],['Olive','#6B6A3A'],['Mint','#B7E0C8'],['Blush','#E7C3C1'],['Pink','#E39FB0'],['Rose','#C9788A'],['Red','#B23B3B'],['Coral','#E0747D'],['Orange','#E08A4B'],['Mustard','#D0A32B'],['Yellow','#E6CE5B'],['Lavender','#B7A8CE'],['Purple','#6C5B7F'],['Plum','#5A3E52']];
+function nameOfHex(hex){try{const c=hx=>[parseInt(hx.slice(1,3),16),parseInt(hx.slice(3,5),16),parseInt(hx.slice(5,7),16)];const [r,g,b]=c(hex);let best='',bd=1e9;for(const[n,h]of CNAMES){const[R,G,B]=c(h);const d=(r-R)**2+(g-G)**2+(b-B)**2;if(d<bd){bd=d;best=n;}}return best;}catch(e){return '';}}
+function palSwatches(pal){return (pal||[]).map(hx=>`<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--sub)"><span style="width:16px;height:16px;border-radius:4px;border:1px solid var(--line);background:${esc(hx)}"></span>${esc(nameOfHex(hx))}</span>`).join('');}
+function paletteFromImg(url,k){k=k||4;return new Promise(res=>{const im=new Image();im.crossOrigin='anonymous';
+  im.onload=()=>{try{const w=44,hh=Math.max(1,Math.round(44*(im.naturalHeight||1)/(im.naturalWidth||1)));
+    const c=document.createElement('canvas');c.width=w;c.height=hh;const ctx=c.getContext('2d');ctx.drawImage(im,0,0,w,hh);
+    const d=ctx.getImageData(0,0,w,hh).data;const bk={};
+    for(let i=0;i<d.length;i+=4){const a=d[i+3];if(a<128)continue;const r=d[i],g=d[i+1],b=d[i+2];if(r>247&&g>247&&b>247)continue;const key=((r>>4)<<8)|((g>>4)<<4)|(b>>4);const q=bk[key]||(bk[key]={r:0,g:0,b:0,n:0});q.r+=r;q.g+=g;q.b+=b;q.n++;}
+    res(Object.values(bk).sort((a,b)=>b.n-a.n).slice(0,k).map(q=>{const r=Math.round(q.r/q.n),g=Math.round(q.g/q.n),b=Math.round(q.b/q.n);return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');}));
+  }catch(e){res([]);}};im.onerror=()=>res([]);im.src=url;});}
+async function fillMissingPalettes(){
+  const boxes=[...document.querySelectorAll('[data-palbox]')];
+  for(const el of boxes){ if(el.getAttribute('data-done'))continue; const u=el.getAttribute('data-hero'); if(!u)continue;
+    const pal=await paletteFromImg(u,4); el.setAttribute('data-done','1'); if(pal.length)el.innerHTML=palSwatches(pal); }
+}
 function render(){
   const {comp,cells,props,trends,macros}=DATA;
   const hasSnap=Object.keys(cells).length>0;
@@ -627,77 +648,64 @@ function render(){
       <div style="font-size:12px;line-height:1.9">${brands.map(b=>`<span class="chip">${esc(b)}</span>`).join('')||'—'}</div></div>
    </div></div>`;
 
-  // ⑤ 스타일 추천 — 라이프스타일별 착장(피팅컷) 이미지 나열, 6개 + 더보기
-  h+=`<div class="sec-h"><span class="n">05</span><h2>스타일 추천 — 라이프스타일별 착장</h2></div><div class="row" style="margin:0 0 10px"><button class="btn" data-expbtn="1" onclick="exportReport()" style="padding:4px 14px">📄 리포트 내보내기(HTML)</button><span class="small" style="color:var(--sub);margin-left:8px">지금 화면 그대로 파일 하나로 저장 — 사진은 가로 900px·JPEG로 줄여 넣어 인터넷 없이도 열립니다</span></div>`;
-  const shots={};
-  props.forEach(p=>{const life=p.lifestyle||'기타';
-    const news=Array.isArray(p.points&&p.points.news)?p.points.news:((p.points&&p.points.new_image)?[{new_image:p.points.new_image,meta:p.points.meta}]:[]);
-    news.forEach(n=>{ if(!n||!n.new_image)return;
-      const mt=String(n.meta||'');
-      const kind=mt.includes('피팅컷')?'피팅컷':(mt.includes('제품샷')?'제품샷':'');
-      (shots[life]=shots[life]||[]).push({img:n.new_image,sub:p.subcategory||(p.points&&p.points.subcategory)||'',kind:kind}); });});
-  const LORDER=['URBAN_LUX','LUX_ACTIVE','HOLIDAY_CAPSULE','WELLNESS','COMMUTE','STREET','OUTDOOR','URBAN','WELLNESS_ACTIVE','APRES_SKI'];
-  // 생성물이 없어도 매트릭스의 라이프스타일은 모두 칸을 만들어 준다(직접 사진을 넣을 수 있도록)
-  const dnaAll=new Set(Object.keys(shots));
-  try{ (dnas||[]).forEach(d=>{ if(d)dnaAll.add(d); }); }catch(_){}
-  if(!dnaAll.size)['URBAN_LUX','LUX_ACTIVE','HOLIDAY_CAPSULE'].forEach(d=>dnaAll.add(d));
-  const lifes=[...dnaAll].sort((a,b)=>{const ia=LORDER.indexOf(a),ib=LORDER.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
-  {
-    lifes.forEach((life,li)=>{
-      const arr=shots[life]||[];
-      const lk='life'+li;
-      h+=`<div class="card" data-lifeblock="${lk}"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-        <div style="font-weight:800;font-size:16px">${esc(life)} <span class="small" style="opacity:.6">· <span data-cnt="${lk}">${arr.length}</span>착장</span></div>
-        <button class="btn" style="padding:2px 10px;font-size:12px" onclick="toggleEdit('${lk}',this)">사진 편집</button>
-        <button class="btn" data-exp="${lk}" style="display:none;padding:2px 10px;font-size:12px">배치 내보내기</button>
-        <label data-imp="${lk}" style="display:none;cursor:pointer;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:3px 9px;background:#fff">배치 가져오기<input type="file" accept="application/json" data-impin="${lk}" style="display:none"></label>
-        <label data-upl="${lk}" style="display:none;cursor:pointer;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:3px 9px;background:#fff">＋ 내 사진 추가<input type="file" accept="image/*" multiple data-uplin="${lk}" style="display:none"></label>
-        <span class="small" data-edithint="${lk}" style="display:none;color:var(--sub)">★ 대표컷 · × 빼기 · ↔ 드래그로 순서 변경 · 뺀 사진은 아래에서 다시 넣기</span>
+  // ⑤ 스타일 제안 — 라이프스타일별 (① 참고 레퍼런스 → ② 대표 착장 컷 → ③ 관련 AI 생성 제품). 관리자 05에서 확정한 배치만 표시.
+  h+=`<div class="sec-h"><span class="n">05</span><h2>스타일 제안 — 라이프스타일별</h2></div>`;
+  const B=DATA.blocks||{};
+  const blkLifes=Object.keys(B).filter(l=>{const x=B[l];return x&&(x.hero||(x.refs||[]).filter(Boolean).length||(x.options||[]).some(o=>o&&(o.main||o.sub||o.name||o.desc)));});
+  const LORDER5=['URBAN_LUX','LUX_ACTIVE','HOLIDAY_CAPSULE','WELLNESS','SPORTIVE × OLD MONEY','STREET × SPORTIVE','OUTDOOR','COMMUTE','STREET','URBAN','WELLNESS_ACTIVE','APRES_SKI'];
+  const lifeOrd=a=>{const i=LORDER5.indexOf(a);return i<0?99:i;};
+  const lifes5=blkLifes.sort((a,b)=>lifeOrd(a)-lifeOrd(b));
+  const lifeTags=life=>{const agg={};lines.forEach(l=>{const c=cells[l+'|'+life];if(c&&c.trendKw)Object.entries(c.trendKw).forEach(([k,v])=>agg[k]=(agg[k]||0)+v);});return Object.entries(agg).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k])=>kwko(k));};
+  if(!lifes5.length){
+    h+=`<div class="card"><div class="empty">아직 확정된 라이프스타일 배치가 없습니다. 관리자 <b>05 리포트 편집기</b>에서 참고 레퍼런스·대표 착장 컷·AI 생성 제품을 셀렉해 <b>배치 저장</b>하면 여기에 그대로 표시됩니다.</div></div>`;
+  }else{
+    lifes5.forEach(life=>{
+      const blk=B[life]||{};
+      const refs=(blk.refs||[]).filter(Boolean);
+      const opts=(blk.options||[]).filter(o=>o&&(o.main||o.sub||o.name||o.desc));
+      const pal=(blk.palette||[]);
+      const tags=lifeTags(life);
+      h+=`<div class="card" style="padding:0;overflow:hidden">
+        <div style="padding:18px 20px 4px">
+          <div style="font-size:11.5px;font-weight:800;color:var(--coral);letter-spacing:.5px;text-transform:uppercase">${esc(blk.tag||life)}</div>
+          <div style="font-size:22px;font-weight:900;letter-spacing:-.3px;margin-top:2px">${esc(blk.title||life)}</div>
+          ${blk.title?`<div class="small" style="font-weight:700;color:#555;margin-top:1px">${esc(life)}</div>`:''}
+          ${blk.desc?`<div class="thesis" style="margin:8px 0 0">${esc(blk.desc)}</div>`:''}
+          ${tags.length?`<div style="margin-top:8px">${tags.map(t=>`<span class="chip">#${esc(t)}</span>`).join('')}</div>`:''}
+        </div>`;
+      if(refs.length){
+        h+=`<div style="padding:14px 20px 0"><div class="small" style="font-weight:800;margin-bottom:8px">① AI REFERENCE SUGGESTION <span style="font-weight:400;color:var(--sub)">· 참고 레퍼런스 ${refs.length}컷</span></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">
+          ${refs.map(u=>`<div style="aspect-ratio:1/1;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#f4f1ef;cursor:zoom-in" onclick="hoverPrev('${esc(u)}')"><img src="${esc(u)}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="imgFallback(this)"></div>`).join('')}
+          </div></div>`;
+      }
+      h+=`<div style="padding:16px 20px 0;display:grid;grid-template-columns:260px 1fr;gap:20px;align-items:start">
+        <div><div class="small" style="font-weight:800;margin-bottom:8px">② 대표 착장 컷</div>
+          ${blk.hero?`<div style="aspect-ratio:3/4;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#f4f1ef;position:relative;cursor:zoom-in" onclick="hoverPrev('${esc(blk.hero)}')"><img src="${esc(blk.hero)}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="imgFallback(this)"><button onclick="event.stopPropagation();hoverPrev('${esc(blk.hero)}')" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:6px;padding:2px 7px;font-size:12px;cursor:pointer">🔍</button></div>`:`<div style="aspect-ratio:3/4;border:1px dashed var(--line);border-radius:12px;background:#f8f6f5;display:flex;align-items:center;justify-content:center;text-align:center" class="small">대표 착장 컷<br>미지정</div>`}
+          <div data-palbox="${esc(life)}" data-hero="${esc(blk.hero||'')}" data-done="${pal.length?'1':''}" style="display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:10px">${palSwatches(pal)}</div>
+        </div>
+        <div><div class="small" style="font-weight:800;margin-bottom:8px">③ 관련 AI 생성 제품 <span style="font-weight:400;color:var(--sub)">· ${opts.length}종</span></div>
+        ${opts.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px">
+          ${opts.map((o,oi)=>`<div style="border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff">
+            <div style="display:grid;grid-template-columns:2fr 1fr;gap:2px;background:var(--line)">
+              <div style="aspect-ratio:1/1;background:#f4f1ef;overflow:hidden;cursor:zoom-in" onclick="hoverPrev('${esc(o.main||o.sub||'')}')">${o.main?`<img src="${esc(o.main)}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="imgFallback(this)">`:''}</div>
+              <div style="aspect-ratio:1/1;background:#f4f1ef;overflow:hidden;cursor:zoom-in" onclick="hoverPrev('${esc(o.sub||o.main||'')}')">${o.sub?`<img src="${esc(o.sub)}" loading="lazy" style="width:100%;height:100%;object-fit:contain" onerror="imgFallback(this)">`:''}</div>
+            </div>
+            <div style="padding:10px 12px 13px">
+              <div class="small" style="font-weight:800;color:var(--coral)">OPTION ${String(oi+1).padStart(2,'0')}</div>
+              <div style="font-weight:800;font-size:14px;margin:2px 0 3px">${esc(o.name||'')}</div>
+              ${o.desc?`<div class="small">${esc(o.desc)}</div>`:''}
+            </div></div>`).join('')}
+          </div>`:`<div class="small" style="color:var(--sub)">AI 생성 제품 카드가 아직 없습니다.</div>`}
+        </div>
       </div>
-      <div data-stage="${lk}"></div>
-      <div data-pool="${lk}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)"></div>
-      </div>`;
-      LIFE_DATA[lk]={life:life,items:arr.map((s2,i)=>({img:s2.img,sub:s2.sub||'',idx:i}))};
-      const _sv=(window.LOOK_LAYOUT||{})[(snap&&snap.id)+'|'+life];
-      if(_sv&&_sv.mine)_sv.mine.forEach(u=>{ if(!LIFE_DATA[lk].items.some(x=>x.img===u))LIFE_DATA[lk].items.push({img:u,sub:'',mine:true}); });
-      loadMine(lk).forEach(x=>{ if(!LIFE_DATA[lk].items.some(y=>y.img===x.img))LIFE_DATA[lk].items.push(x); });
+      <div style="height:18px"></div></div>`;
     });
   }
-  // ⑦ 제품컷 — 맨 아래 "제품컷 보기"로 펼치면 제품샷이 쭉(라이프별)
-  const prodShots={};
-  props.forEach(p=>{const life=p.lifestyle||'기타';
-    const news=Array.isArray(p.points&&p.points.news)?p.points.news:((p.points&&p.points.new_image)?[{new_image:p.points.new_image,meta:p.points.meta}]:[]);
-    news.forEach(n=>{ if(!n||!n.new_image)return; const mt=String(n.meta||''); if(!(/제품샷|제품컷|리얼/.test(mt))||mt.includes('피팅컷'))return;  // 제품컷만
-      (prodShots[life]=prodShots[life]||[]).push({img:n.new_image,sub:p.subcategory||(p.points&&p.points.subcategory)||''}); });});
-  const prodLifes=Object.keys(prodShots).sort((a,b)=>{const ia=LORDER.indexOf(a),ib=LORDER.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});
-  if(prodLifes.length){
-    const totalP=prodLifes.reduce((s,l)=>s+prodShots[l].length,0);
-    h+=`<div class="sec-h"><span class="n">06</span><h2>제품컷</h2></div>`;
-    h+=`<div class="card">
-      <button class="btn" style="width:100%;text-align:left;font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px" onclick="toggleFold('prodfold',this)">
-        <span class="fold-arrow">▸</span> 제품컷 보기 <span class="small" style="opacity:.6;font-weight:400">· 총 ${totalP}컷</span></button>
-      <div id="prodfold" style="display:none;margin-top:12px">
-        ${prodLifes.map(life=>`<div style="margin-bottom:14px">
-          <div style="font-weight:700;font-size:14px;margin-bottom:8px;color:var(--sub)">${esc(life)} · ${prodShots[life].length}</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px">
-            ${prodShots[life].map((s,i)=>`<div>
-              <div style="position:relative;width:100%;aspect-ratio:3/4;background:#f6f4ef;border:1px solid var(--line);border-radius:8px;overflow:hidden;cursor:zoom-in" onclick="hoverPrev('${esc(s.img)}')">
-                <img src="${esc(s.img)}" loading="lazy" style="width:100%;height:100%;object-fit:contain" onerror="this.parentNode.style.opacity=.3">
-                <button onclick="event.stopPropagation();hoverPrev('${esc(s.img)}')" title="크게 보기" style="position:absolute;top:5px;right:5px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:6px;padding:2px 7px;font-size:12px;cursor:pointer">🔍</button></div>
-              <div class="small" style="margin-top:4px;color:var(--sub);display:flex;justify-content:space-between;gap:6px;align-items:center">
-                <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.sub||'')}</span>
-                <a href="${esc(s.img)}" onclick="dlImg('${esc(s.img)}','${esc(life)}_prod_${i+1}.jpg');return false;" title="다운로드" style="color:var(--coral2);font-weight:700;text-decoration:none;flex:0 0 auto">⬇</a>
-              </div>
-            </div>`).join('')}
-          </div>
-        </div>`).join('')}
-      </div>
-    </div>`;
-  }
-  h+=`</div>`;
+
   $('#body').innerHTML=h;
   try{drawAllLives();}catch(e){}
-  try{drawAllLives();}catch(e){}
+  try{fillMissingPalettes();}catch(e){}
   if(openCell&&DATA.cells[openCell])showCell(openCell,true);
 }
 window.toggleFold=(id,btn)=>{const el=document.getElementById(id);if(!el)return;const open=el.style.display==='none';el.style.display=open?'block':'none';const a=btn&&btn.querySelector('.fold-arrow');if(a)a.textContent=open?'▾':'▸';};
@@ -810,7 +818,7 @@ function expandPanes(root){ // 정적본은 JS가 없으니 모든 셀·탭 카�
   root.querySelectorAll('.sc button').forEach(b=>{if(/더보기/.test(b.textContent))b.remove();});
 }
 function frozenScript(){ // 저장본에 심을 얼린 데이터(스크립트보다 먼저 실행되게 head에 넣음)
-  const slim={snap:DATA.snap,comp:DATA.comp,cells:DATA.cells,props:DATA.props,imgMap:DATA.imgMap,trends:DATA.trends,macros:DATA.macros};
+  const slim={snap:DATA.snap,comp:DATA.comp,cells:DATA.cells,props:DATA.props,imgMap:DATA.imgMap,trends:DATA.trends,macros:DATA.macros,blocks:DATA.blocks};
   const payload={DATA:slim,KWKO:window.KWKO||{},CADV:window.CADV||{}};
   const json=JSON.stringify(payload).replace(/<\//g,'<\\/');
   return `<script>window.__MLB_FROZEN__=${json};<\/script>`;
