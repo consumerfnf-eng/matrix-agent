@@ -53,7 +53,7 @@ progress{width:100%;height:8px}
 </head>
 <body>
 <header>
-  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-183</span></h1>
+  <h1>MATRIX AI AGENT · 관리자 <span style="font-weight:400;font-size:11px;opacity:.7">v260812-184</span></h1>
   <div id="scopeBar" class="hide" style="display:flex;gap:6px;align-items:center;margin-left:16px">
     <select id="selBrand" style="padding:4px 6px;font-size:12px"></select>
     <span style="opacity:.4">›</span>
@@ -2303,8 +2303,8 @@ function drawCellDetail(key){
           <div style="margin-top:6px"><button class="ghost" style="padding:3px 10px;font-size:11px" onclick="var m=document.getElementById('more_${gid}');m.style.display='grid';this.remove()">더보기 (+${more}모델) — 드래그하려면 펼치기</button></div>`:''}
         <div style="margin-top:8px;border-top:1px dashed var(--line);padding-top:8px">
           <div class="row" style="gap:6px;align-items:center;flex-wrap:wrap">
-            <button class="ghost" style="padding:3px 10px;font-size:11px" title="기본: 브랜드에 더 충실하게 재해석 — MLB=KR 시그니처(모노그램·컬러블록·팝포인트), DUVETICA=올드머니 액티브 럭셔리 DNA. 레퍼는 베이스로만" onclick="genNewCard('${key}','${encodeURIComponent(sub)}','${gid}','cad')">✦ AI 이미지 생성</button>
-            <button class="ghost" style="padding:3px 10px;font-size:11px" title="레퍼런스에 충실. 레퍼의 실루엣·배색·소재를 최대한 살려 가볍게만 변형" onclick="genNewCard('${key}','${encodeURIComponent(sub)}','${gid}','ref')">✦ AI 이미지 생성(레퍼 조합)</button>
+            <button class="ghost" style="padding:3px 10px;font-size:11px" title="기본: 브랜드에 더 충실하게 재해석 — MLB=KR 시그니처(모노그램·컬러블록·팝포인트), DUVETICA=올드머니 액티브 럭셔리 DNA. 레퍼 형태 유지+색·소재 재구성" onclick="genNewCard('${key}','${encodeURIComponent(sub)}','${gid}','cad')">✦ AI 이미지 생성</button>
+            <button class="ghost" style="padding:3px 10px;font-size:11px" title="레퍼런스에 충실. 레퍼의 실루엣·배색·소재를 최대한   레퍼에 가장 충실(형태·색·소재 유지)" onclick="genNewCard('${key}','${encodeURIComponent(sub)}','${gid}','ref')">✦ AI 이미지 생성(레퍼 조합)</button>
             <span class="small" id="genmsg_${gid}" style="color:var(--sub)">CAD 기준=도면 실루엣 / 레퍼 기준=매칭 레퍼 형태·디테일 · 눌러 누적 · 여러 개 확정 가능</span>
           </div>
           <div id="genbox_${gid}" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:10px"></div>
@@ -2678,7 +2678,7 @@ window.genNewCard=async(key,subEnc,gid,mode)=>{
       return ` FORM — this style is a deliberate HYBRID named "${subName}": fuse ${parts.map(x=>x.d).join(' WITH ')}. The result must clearly read as ALL of these at once (e.g. a ballet-flat body that also has a real sneaker outsole and strap), not just one of them. This hybrid form is required even if a given reference photo shows only one of them.`;
     }
     if(parts.length===1){
-      return ` FORM — keep a clear ${parts[0].k} silhouette (${parts[0].d}).`;
+      return ` FORM — this is a ${parts[0].k} style: keep a clear ${parts[0].k} silhouette (${parts[0].d}) that matches the attached reference's shoe type; do not morph it into a different category.`;
     }
     return '';
   }
@@ -2857,8 +2857,8 @@ window.genNewCard=async(key,subEnc,gid,mode)=>{
     const basisLine=refFaithful
       ? `Stay closely FAITHFUL to the reference shoe — keep its silhouette, proportions, colourway and materials, and reinterpret it as a next-season ${brand} version with only light, tasteful refinements. Do not stray far from the reference.`
       : (mlbSignature
-        ? 'Reinterpret it as an MLB KOREA signature sneaker — a youthful, Gen-Z street look. You may restyle proportions, colour-blocking and graphics more boldly while keeping it clean and wearable.'
-        : `Recompose it freely into a fresh, wearable ${brand} design.`);
+        ? 'Reinterpret it as an MLB KOREA signature sneaker — a youthful, Gen-Z street look. You may restyle colour-blocking, materials and graphics more boldly, BUT keep the SAME shoe TYPE and overall silhouette as the reference — same collar height, same toe shape, same last and same outsole category. Do not turn a low-profile sneaker into a ballet flat, loafer or any other type.'
+        : `Recompose it freely into a fresh, wearable ${brand} design, but keep the SAME shoe type and silhouette family as the reference (collar height, toe shape, outsole category).`);
     // 팝 액센트(무채·톤 바디 + 솔/힐/아일릿만 포인트 컬러) & MLB 시그니처(모노그램 프린트 등)
     const accentPool=['keep the upper neutral/tonal but add ONE pop-colour accent on the OUTSOLE only (hot pink, coral or lime)',
       'a neutral tonal upper with a contrast pop-colour heel tab and eyelets',
